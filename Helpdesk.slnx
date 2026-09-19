@@ -5,4 +5,8 @@
     <Project Path="src/Helpdesk.Core/Helpdesk.Core.csproj" />
     <Project Path="src/Helpdesk.Infrastructure/Helpdesk.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Helpdesk.Core.Tests/Helpdesk.Core.Tests.csproj" />
+    <Project Path="tests/Helpdesk.Infrastructure.Tests/Helpdesk.Infrastructure.Tests.csproj" />
+  </Folder>
 </Solution>
