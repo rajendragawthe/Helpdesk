@@ -12,6 +12,7 @@ type UseCurrentUserResult = {
   user: CurrentUser | null
   loading: boolean
   error: string | null
+  notRegistered: boolean
 }
 
 export function useCurrentUser(): UseCurrentUserResult {
@@ -19,6 +20,7 @@ export function useCurrentUser(): UseCurrentUserResult {
   const [user, setUser] = useState<CurrentUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [notRegistered, setNotRegistered] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -31,7 +33,13 @@ export function useCurrentUser(): UseCurrentUserResult {
       try {
         const response = await apiFetch(instance, '/api/auth/me')
         if (!response.ok) {
-          throw new Error(`Request failed: ${response.status} ${response.statusText}`)
+          const body = await response.json().catch(() => null) as { message?: string } | null
+          const message = body?.message ?? `Request failed: ${response.status} ${response.statusText}`
+          if (!cancelled) {
+            setNotRegistered(response.status === 403)
+            setError(message)
+          }
+          return
         }
         const data = (await response.json()) as CurrentUser
         if (!cancelled) {
@@ -54,5 +62,5 @@ export function useCurrentUser(): UseCurrentUserResult {
     }
   }, [instance, accounts])
 
-  return { user, loading, error }
+  return { user, loading, error, notRegistered }
 }

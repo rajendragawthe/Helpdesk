@@ -14,7 +14,7 @@ public class UserRepository(HelpdeskDbContext dbContext) : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        return await dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+        return await dbContext.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
     }
 
     public async Task<User?> GetByExternalObjectIdAsync(string externalObjectId)

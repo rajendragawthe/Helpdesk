@@ -1,6 +1,8 @@
+using Helpdesk.Api.Auth;
 using Helpdesk.Core.Enums;
 using Helpdesk.Infrastructure;
 using Helpdesk.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 
@@ -17,6 +19,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+
+builder.Services.AddScoped<IClaimsTransformation, HelpdeskUserClaimsTransformation>();
 
 builder.Services.AddAuthorization(options =>
 {
