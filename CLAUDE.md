@@ -60,7 +60,9 @@ npm install
 npx playwright install --with-deps chromium
 npm run test:e2e
 ```
-`playwright.config.ts` starts the API and Vite dev server itself via `webServer`, pointing the API's connection string at `helpdesk_test`. See `e2e/README.md` for the DB creation/migration command and the current gap (no test identity provider for the real Entra ID login flow yet).
+`playwright.config.ts` starts the API and Vite dev server itself via `webServer` (which boots *before* `globalSetup` runs), pointing the API's connection string at `helpdesk_test`. `env.ts` centralizes the frontend/backend URLs and DB connection fields (each overridable via `E2E_*` env vars — see `e2e/README.md`); `global-setup.ts` truncates `Users`/`Tickets`/`Messages`/`Classifications` (not `__EFMigrationsHistory`) before each run so tests start from a known-empty state, with no teardown so a failed run's data stays inspectable. See `e2e/README.md` for the DB creation/migration command and the current gap (no test identity provider for the real Entra ID login flow yet).
+
+For configuring/extending this E2E setup or writing edge-case test suites (timeouts, race conditions, boundary data, validation failures, DB locks, downstream Graph/OpenRouter failures), use the `qa-engineer` subagent (`.claude/agents/qa-engineer.md`) rather than doing it ad hoc.
 
 ### Frontend (`client/helpdesk-web`)
 ```
