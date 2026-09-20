@@ -1,7 +1,7 @@
-// client/helpdesk-web/src/components/AuthPanel.tsx
 import { useState } from 'react'
 import { useMsal, useIsAuthenticated } from '@azure/msal-react'
 import { apiFetch } from '../api/apiFetch'
+import { apiScopes } from '../authConfig'
 
 type MeResponse = {
   name: string | null
@@ -15,7 +15,7 @@ function AuthPanel() {
   const [me, setMe] = useState<MeResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const login = () => instance.loginRedirect()
+  const login = () => instance.loginRedirect({ scopes: apiScopes })
   const logout = () => instance.logoutRedirect()
 
   const callMe = async () => {
@@ -26,7 +26,7 @@ function AuthPanel() {
       }
       const response = await apiFetch(instance, '/api/auth/me')
       if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`)
+        throw new Error(`Request failed: ${response.status} ${response.statusText} ${await response.text()}`)
       }
       setMe(await response.json())
     } catch (err) {

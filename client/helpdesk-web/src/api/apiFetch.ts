@@ -1,4 +1,3 @@
-// client/helpdesk-web/src/api/apiFetch.ts
 import type { IPublicClientApplication } from '@azure/msal-browser'
 import { InteractionRequiredAuthError } from '@azure/msal-browser'
 import { apiScopes } from '../authConfig'

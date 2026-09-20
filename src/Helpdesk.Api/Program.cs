@@ -1,3 +1,4 @@
+using Helpdesk.Core.Enums;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 
@@ -15,8 +16,8 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
-    options.AddPolicy("AgentOnly", policy => policy.RequireRole("Admin", "Agent"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(Role.Admin)));
+    options.AddPolicy("AgentOnly", policy => policy.RequireRole(nameof(Role.Admin), nameof(Role.Agent)));
 });
 
 var app = builder.Build();
@@ -27,7 +28,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
