@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/Helpdesk.Core.Tests/Helpdesk.Core.Tests.csproj" />
     <Project Path="tests/Helpdesk.Infrastructure.Tests/Helpdesk.Infrastructure.Tests.csproj" />
+    <Project Path="tests/Helpdesk.Application.Tests/Helpdesk.Application.Tests.csproj" />
   </Folder>
 </Solution>
