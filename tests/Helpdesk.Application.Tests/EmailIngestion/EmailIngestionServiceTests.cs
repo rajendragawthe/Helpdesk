@@ -137,9 +137,22 @@ public class EmailIngestionServiceTests
 
         await service.IngestNewEmailsAsync();
 
-        Assert.Single(ticketRepository.Tickets);
-        Assert.Equal("conv-ok", ticketRepository.Tickets[0].ConversationId);
-        Assert.Single(messageRepository.Messages);
+        // Self-healing / eventual-consistency design: ticket creation for the failing
+        // email succeeds and is legitimately left in place even though its message
+        // failed to persist. The next poll tick will retry "msg-fail" (it was never
+        // recorded as processed), find the already-created "conv-fail" ticket via
+        // GetByConversationIdAsync, and append the message to it instead of creating
+        // a duplicate ticket. No data loss, just a one-tick delay.
+        Assert.Equal(2, ticketRepository.Tickets.Count);
+
+        var failedTicket = Assert.Single(ticketRepository.Tickets, t => t.ConversationId == "conv-fail");
+        Assert.DoesNotContain(messageRepository.Messages, m => m.TicketId == failedTicket.Id);
+
+        var okTicket = Assert.Single(ticketRepository.Tickets, t => t.ConversationId == "conv-ok");
+        var message = Assert.Single(messageRepository.Messages);
+        Assert.Equal(okTicket.Id, message.TicketId);
+        Assert.Equal("msg-ok", message.ExternalMessageId);
+
         Assert.Equal(["msg-ok"], mailClient.MarkedAsProcessed);
     }
 }

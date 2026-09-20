@@ -50,19 +50,27 @@ public class EmailIngestionService(
             return;
         }
 
-        var existingTicket = await ticketRepository.GetByConversationIdAsync(email.ConversationId);
-        var isNewTicket = existingTicket is null;
+        var ticket = await ticketRepository.GetByConversationIdAsync(email.ConversationId);
 
-        var ticket = existingTicket ?? new Ticket
+        if (ticket is null)
         {
-            Id = Guid.NewGuid(),
-            Subject = email.Subject,
-            RequesterEmail = email.FromAddress,
-            Status = TicketStatus.New,
-            ConversationId = email.ConversationId,
-            CreatedAt = email.ReceivedAt,
-            UpdatedAt = email.ReceivedAt,
-        };
+            ticket = new Ticket
+            {
+                Id = Guid.NewGuid(),
+                Subject = email.Subject,
+                RequesterEmail = email.FromAddress,
+                Status = TicketStatus.New,
+                ConversationId = email.ConversationId,
+                CreatedAt = email.ReceivedAt,
+                UpdatedAt = email.ReceivedAt,
+            };
+            await ticketRepository.AddAsync(ticket);
+        }
+        else
+        {
+            ticket.UpdatedAt = email.ReceivedAt;
+            await ticketRepository.UpdateAsync(ticket);
+        }
 
         var message = new Message
         {
@@ -74,21 +82,7 @@ public class EmailIngestionService(
             ExternalMessageId = email.ExternalMessageId,
             ReceivedAt = email.ReceivedAt,
         };
-
-        // Persist the message before the ticket so a failed message write leaves no
-        // orphaned ticket behind for this conversation (see ProcessEmailAsync callers,
-        // which log and continue on failure rather than letting one bad email abort the batch).
         await messageRepository.AddAsync(message);
-
-        if (isNewTicket)
-        {
-            await ticketRepository.AddAsync(ticket);
-        }
-        else
-        {
-            ticket.UpdatedAt = email.ReceivedAt;
-            await ticketRepository.UpdateAsync(ticket);
-        }
 
         await mailClient.MarkAsProcessedAsync(email.ExternalMessageId);
     }
