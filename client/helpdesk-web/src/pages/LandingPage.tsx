@@ -1,6 +1,7 @@
 import { useMsal } from '@azure/msal-react'
 import heroImg from '../assets/hero.png'
 import { apiScopes } from '../authConfig'
+import { Button } from '@/components/ui/button'
 
 function LandingPage() {
   const { instance } = useMsal()
@@ -19,13 +20,9 @@ function LandingPage() {
         seconds &mdash; so customers get faster answers and your team focuses on the
         issues that actually need a human.
       </p>
-      <button
-        type="button"
-        onClick={login}
-        className="cursor-pointer rounded-md border-2 border-transparent bg-accent px-6 py-2.5 text-base text-white transition-opacity hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
+      <Button type="button" size="lg" onClick={login}>
         Sign in
-      </button>
+      </Button>
     </section>
   )
 }

@@ -1,5 +1,6 @@
 import { useMsal } from '@azure/msal-react'
 import { Link } from 'react-router'
+import { Button } from '@/components/ui/button'
 
 type NavBarProps = {
   isAdmin: boolean
@@ -20,13 +21,9 @@ function NavBar({ isAdmin }: NavBarProps) {
           </Link>
         )}
       </div>
-      <button
-        type="button"
-        onClick={logout}
-        className="cursor-pointer rounded-md border-2 border-transparent bg-accent-bg px-4 py-2 text-[15px] text-accent transition-colors hover:border-accent-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-      >
+      <Button type="button" variant="ghost" onClick={logout}>
         Sign out
-      </button>
+      </Button>
     </nav>
   )
 }

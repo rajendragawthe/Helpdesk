@@ -76,13 +76,20 @@ When adding a feature: define the interface/entity in `Core`, implement it in `I
 Note: the single `User` entity/table holds both Admin and Agent accounts, distinguished by the `Role` enum — there is no separate "Agent" entity.
 
 ### Frontend
-Plain React + TypeScript SPA scaffolded with Vite (no framework router/state library added yet). Talks to the backend exclusively over `/api/*`, proxied to the .NET API in dev.
+React + TypeScript SPA scaffolded with Vite, routed with `react-router` (pages under `src/pages`, top-level routing in `src/App.tsx`). Talks to the backend exclusively over `/api/*`, proxied to the .NET API in dev.
+
+Styling is Tailwind CSS v4 (`@tailwindcss/vite`, config-free — tokens live in `src/index.css`). UI components come from **shadcn/ui** (`new-york` style, blue theme, Lucide icons); component source is vendored into `src/components/ui` (all standard components installed) rather than pulled from a package. Prefer an existing shadcn component over hand-rolled markup when one fits (`Button`, `Input`, `Label`, `Card`, `Table`, `Badge`, `Alert`, etc. are already used across `NavBar`/`LandingPage`/`HomePage`/`AdminUsersPage`). Add more components with:
+```
+cd client/helpdesk-web
+npx shadcn@3.8.5 add <component>
+```
+Pinned to `3.8.5` rather than `@latest` — the current `shadcn@4.x` CLI dropped `--base-color`/simple theming in favor of a browser-based preset builder that doesn't fit this non-interactive workflow; `3.8.5` still supports Tailwind v4 and `-b <base-color>`. Re-evaluate the pin if that changes upstream.
 
 ### Auth model (Phase 1 done)
 Microsoft Entra ID SSO end-to-end: MSAL for React on the frontend, Microsoft Identity Web (JWT bearer) on the backend, with Admin/Agent role claims (`AdminOnly`/`AgentOnly` authorization policies in `Program.cs`). Admins create Agent accounts; there's no self-registration.
 
-### User management (Phase 3 backend done)
-`UsersController` (`AdminOnly`) exposes `GET /api/users` and `POST /api/users` to create `Role.Agent` records by email/display name. `AuthController.Me()` links a pre-created record to the caller's Entra object ID (`ExternalObjectId`) on first authenticated call, matched by email. The admin-only "Add Agent" UI (Phase 3 frontend) is not yet built.
+### User management (Phase 3 done)
+`UsersController` (`AdminOnly`) exposes `GET /api/users` and `POST /api/users` to create `Role.Agent` records by email/display name. `AuthController.Me()` links a pre-created record to the caller's Entra object ID (`ExternalObjectId`) on first authenticated call, matched by email. The admin-only "Add Agent" UI is built at `src/pages/AdminUsersPage.tsx` (shadcn `Card`/`Table`/`Input`/`Button`/`Badge`), routed at `/admin/users`.
 
 ### Data flow (MVP core loop)
 Email arrives in an O365 mailbox → polled via Microsoft Graph API (`Helpdesk.Infrastructure/GraphApi`, background `IHostedService`, per `implementation-plan.md` Phase 4) → ticket + message created → AI classification/summary via OpenRouter (`Helpdesk.Infrastructure/Ai`) → AI drafts a reply against a hardcoded KB → ticket status `New → InReview` → agent reviews/edits in the queue UI → reply sent back through Graph API as a threaded email reply → status `Replied`.

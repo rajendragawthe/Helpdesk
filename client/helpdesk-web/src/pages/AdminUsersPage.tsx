@@ -4,6 +4,20 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { apiFetch } from '../api/apiFetch'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 const addAgentSchema = z.object({
   email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
@@ -78,87 +92,72 @@ function AdminUsersPage() {
     <section className="px-8 py-10 text-left">
       <h1 className="mb-6 text-[32px]">Manage Agents</h1>
 
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        className="mb-8 flex flex-wrap items-start gap-4"
-      >
-        <div className="flex flex-col gap-1">
-          <label htmlFor="displayName" className="text-sm text-text">
-            Display name
-          </label>
-          <input
-            id="displayName"
-            type="text"
-            {...register('displayName')}
-            className="rounded-md border border-border bg-bg px-2.5 py-2 text-[15px] text-text-h"
-          />
-          {errors.displayName && (
-            <p role="alert" className="text-[13px] text-danger">
-              {errors.displayName.message}
-            </p>
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Add agent</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-wrap items-start gap-4"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="displayName">Display name</Label>
+              <Input id="displayName" type="text" {...register('displayName')} />
+              {errors.displayName && (
+                <p role="alert" className="text-[13px] text-destructive">
+                  {errors.displayName.message}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" {...register('email')} />
+              {errors.email && (
+                <p role="alert" className="text-[13px] text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
+            <Button type="submit" disabled={isSubmitting} className="mt-5.5 self-end">
+              {isSubmitting ? 'Adding…' : 'Add agent'}
+            </Button>
+          </form>
+          {submitError && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
           )}
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-sm text-text">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            {...register('email')}
-            className="rounded-md border border-border bg-bg px-2.5 py-2 text-[15px] text-text-h"
-          />
-          {errors.email && (
-            <p role="alert" className="text-[13px] text-danger">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="mt-5 cursor-pointer self-end rounded-md border-2 border-transparent bg-accent px-4.5 py-2.5 text-[15px] text-white disabled:cursor-default disabled:opacity-60"
-        >
-          {isSubmitting ? 'Adding…' : 'Add agent'}
-        </button>
-        {submitError && (
-          <p role="alert" className="text-danger">
-            {submitError}
-          </p>
-        )}
-      </form>
+        </CardContent>
+      </Card>
 
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            <th className="border-b border-border px-3 py-2.5 text-left text-[13px] font-medium text-text">
-              Display name
-            </th>
-            <th className="border-b border-border px-3 py-2.5 text-left text-[13px] font-medium text-text">
-              Email
-            </th>
-            <th className="border-b border-border px-3 py-2.5 text-left text-[13px] font-medium text-text">
-              Role
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Display name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {users.map((u) => (
-            <tr key={u.id}>
-              <td className="border-b border-border px-3 py-2.5">{u.displayName}</td>
-              <td className="border-b border-border px-3 py-2.5">{u.email}</td>
-              <td className="border-b border-border px-3 py-2.5">
-                {roleLabels[u.role] ?? u.role}
-              </td>
-            </tr>
+            <TableRow key={u.id}>
+              <TableCell>{u.displayName}</TableCell>
+              <TableCell>{u.email}</TableCell>
+              <TableCell>
+                <Badge variant={u.role === 0 ? 'default' : 'secondary'}>
+                  {roleLabels[u.role] ?? u.role}
+                </Badge>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
       {listError && (
-        <p role="alert" className="text-danger">
-          {listError}
-        </p>
+        <Alert variant="destructive" className="mt-4">
+          <AlertDescription>{listError}</AlertDescription>
+        </Alert>
       )}
     </section>
   )

@@ -3,6 +3,10 @@
 ## Frontend
 - **React + TypeScript**, bundled with **Vite**
 - SPA calling the backend Web API over HTTP
+- Routing: `react-router` (routed pages under `src/pages`)
+- Forms: `react-hook-form` + `zod` (`@hookform/resolvers`)
+- Styling: **Tailwind CSS v4** (`@tailwindcss/vite`)
+- UI components: **shadcn/ui** (`new-york` style, blue theme, Lucide icons) — component source lives in `src/components/ui`; add more with `npx shadcn@3.8.5 add <component>` (pinned below `@latest`, see note)
 - Auth: MSAL for React (`@azure/msal-react`) for Entra SSO, calling the API with a bearer token
 
 ## Backend
@@ -60,3 +64,6 @@ Helpdesk.sln
 - **Email ingestion**: Microsoft Graph SDK, polled via a hosted background service (`IHostedService`) — avoids Graph webhook subscription/renewal complexity at MVP volume (~100 tickets/day)
 - **AI calls**: OpenRouter via `HttpClient` (typed client in `Helpdesk.Infrastructure/Ai`)
 - **Migrations**: EF Core Migrations, generated from `Helpdesk.Infrastructure`, applied via `dotnet ef database update` or on startup for dev
+
+## Notes
+- The `shadcn@latest` CLI (v4.x) dropped the simple `--base-color` flag in favor of a browser-based preset builder, so component installs are pinned to `shadcn@3.8.5`, which still supports `-b <base-color>` and Tailwind v4. Re-evaluate the pin if a future `shadcn` release restores CLI-only theming.
