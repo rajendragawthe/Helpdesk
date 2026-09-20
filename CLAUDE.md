@@ -79,7 +79,10 @@ Note: the single `User` entity/table holds both Admin and Agent accounts, distin
 Plain React + TypeScript SPA scaffolded with Vite (no framework router/state library added yet). Talks to the backend exclusively over `/api/*`, proxied to the .NET API in dev.
 
 ### Auth model (Phase 1 done)
-Microsoft Entra ID SSO end-to-end: MSAL for React on the frontend, Microsoft Identity Web (JWT bearer) on the backend, with Admin/Agent role claims (`AdminOnly`/`AgentOnly` authorization policies in `Program.cs`). Admins create Agent accounts; there's no self-registration. User management UI (Phase 3) is not yet built.
+Microsoft Entra ID SSO end-to-end: MSAL for React on the frontend, Microsoft Identity Web (JWT bearer) on the backend, with Admin/Agent role claims (`AdminOnly`/`AgentOnly` authorization policies in `Program.cs`). Admins create Agent accounts; there's no self-registration.
+
+### User management (Phase 3 backend done)
+`UsersController` (`AdminOnly`) exposes `GET /api/users` and `POST /api/users` to create `Role.Agent` records by email/display name. `AuthController.Me()` links a pre-created record to the caller's Entra object ID (`ExternalObjectId`) on first authenticated call, matched by email. The admin-only "Add Agent" UI (Phase 3 frontend) is not yet built.
 
 ### Data flow (MVP core loop)
 Email arrives in an O365 mailbox → polled via Microsoft Graph API (`Helpdesk.Infrastructure/GraphApi`, background `IHostedService`, per `implementation-plan.md` Phase 4) → ticket + message created → AI classification/summary via OpenRouter (`Helpdesk.Infrastructure/Ai`) → AI drafts a reply against a hardcoded KB → ticket status `New → InReview` → agent reviews/edits in the queue UI → reply sent back through Graph API as a threaded email reply → status `Replied`.

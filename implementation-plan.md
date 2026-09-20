@@ -26,11 +26,11 @@
 19. Register DbContext + repositories in DI via `Helpdesk.Infrastructure/DependencyInjection.cs` (`AddInfrastructure(IConfiguration)`), called from `Helpdesk.Api/Program.cs`
 19a. Seed dev data via `Helpdesk.Infrastructure/Data/DbSeeder.cs` (first Admin user, sample Agent user, sample tickets) — runs on API startup if `Users` table is empty
 
-## Phase 3 — Minimal User Management (Admin adds Agents)
-20. `UsersController`: `POST /api/users` (admin-only, create a `User` record with Role = Agent), `GET /api/users` (list)
-21. Agent creation flow: admin enters the agent's Entra email; `User` record stored with Role = Agent, linked by email/object ID at first login
-22. Frontend: simple "Add Agent" form + user list page (admin-only route)
-23. Manual test: admin adds an agent, agent logs in via SSO and is recognized with Agent role
+## Phase 3 — Minimal User Management (Admin adds Agents) — backend done
+20. `UsersController`: `POST /api/users` (admin-only, create a `User` record with Role = Agent), `GET /api/users` (list) — done
+21. Agent creation flow: admin enters the agent's Entra email; `User` record stored with Role = Agent, linked by email/object ID at first login — done (linking happens in `AuthController.Me()`)
+22. Frontend: simple "Add Agent" form + user list page (admin-only route) — not yet built
+23. Manual test: admin adds an agent, agent logs in via SSO and is recognized with Agent role — pending frontend/manual verification
 
 ## Phase 4 — Email Ingestion (Microsoft Graph)
 24. Register Graph API permissions (Mail.Read) on the app registration for the shared mailbox
