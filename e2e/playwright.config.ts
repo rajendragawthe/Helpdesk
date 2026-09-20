@@ -1,14 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
-
-const FRONTEND_URL = process.env.E2E_FRONTEND_URL ?? 'http://localhost:5173'
-const BACKEND_URL = process.env.E2E_BACKEND_URL ?? 'http://localhost:5080'
-const TEST_DB_CONNECTION_STRING =
-  process.env.E2E_DB_CONNECTION_STRING ??
-  'Host=localhost;Port=5432;Database=helpdesk_test;Username=helpdesk;Password=helpdesk'
+import { BACKEND_URL, FRONTEND_URL, TEST_DB_CONNECTION_STRING } from './env'
 
 // https://playwright.dev/docs/test-configuration
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -26,7 +22,9 @@ export default defineConfig({
   ],
   // Both the API and the SPA dev server are started against the isolated
   // `helpdesk_test` database (same local Postgres instance as dev, port
-  // 5432) so E2E runs never touch dev/seeded data.
+  // 5432) so E2E runs never touch dev/seeded data. globalSetup then
+  // truncates that database's tables before tests run (see global-setup.ts)
+  // — no teardown, so a failed run's data is left in place to inspect.
   webServer: [
     {
       command: 'dotnet run --project ../src/Helpdesk.Api',

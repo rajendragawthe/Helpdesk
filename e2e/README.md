@@ -30,6 +30,11 @@ dotnet ef database update \
 
 Re-run the migration command after pulling schema changes.
 
+Each run's `globalSetup` (`global-setup.ts`) truncates `Users`, `Tickets`,
+`Messages`, and `Classifications` (not `__EFMigrationsHistory`) before tests
+start, so every run begins from an empty, known state. There's no teardown —
+a failed run's data is left in place so you can inspect it with `psql`.
+
 ## Running tests
 
 ```
@@ -42,8 +47,9 @@ npm run test:e2e:headed # headed browser
 `playwright.config.ts`'s `webServer` entries launch `dotnet run` (API, with
 `ConnectionStrings__DefaultConnection` overridden to the test DB) and
 `npm run dev` (frontend) automatically, and reuse them if already running
-locally. Override the target URLs/connection string via `E2E_FRONTEND_URL`,
-`E2E_BACKEND_URL`, `E2E_DB_CONNECTION_STRING` env vars if needed (e.g. in CI).
+locally. All of the target URLs and DB connection fields (`env.ts`) can be
+overridden via `E2E_FRONTEND_URL`, `E2E_BACKEND_URL`, `E2E_DB_HOST`,
+`E2E_DB_PORT`, `E2E_DB_NAME`, `E2E_DB_USER`, `E2E_DB_PASSWORD` — useful in CI.
 
 ## Known gap: Entra ID auth
 
