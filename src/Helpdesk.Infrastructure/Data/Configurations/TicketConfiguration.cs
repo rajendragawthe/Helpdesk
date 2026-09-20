@@ -9,8 +9,8 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
     public void Configure(EntityTypeBuilder<Ticket> builder)
     {
         builder.HasKey(t => t.Id);
-        builder.Property(t => t.Subject).IsRequired().HasMaxLength(500);
-        builder.Property(t => t.RequesterEmail).IsRequired().HasMaxLength(320);
+        builder.Property(t => t.Subject).IsRequired().HasMaxLength(1000);
+        builder.Property(t => t.RequesterEmail).IsRequired().HasMaxLength(400);
         builder.Property(t => t.ConversationId).HasMaxLength(200);
         builder.HasIndex(t => t.ConversationId);
 
