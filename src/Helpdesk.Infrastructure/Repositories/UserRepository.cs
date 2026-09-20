@@ -14,7 +14,7 @@ public class UserRepository(HelpdeskDbContext dbContext) : IUserRepository
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        return await dbContext.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+        return await dbContext.Users.FirstOrDefaultAsync(u => EF.Functions.ILike(u.Email, email));
     }
 
     public async Task<User?> GetByExternalObjectIdAsync(string externalObjectId)
@@ -24,7 +24,7 @@ public class UserRepository(HelpdeskDbContext dbContext) : IUserRepository
 
     public async Task<IReadOnlyList<User>> GetAllAsync()
     {
-        return await dbContext.Users.OrderBy(u => u.DisplayName).ToListAsync();
+        return await dbContext.Users.AsNoTracking().OrderBy(u => u.DisplayName).ToListAsync();
     }
 
     public async Task AddAsync(User user)

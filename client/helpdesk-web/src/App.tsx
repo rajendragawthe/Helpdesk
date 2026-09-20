@@ -8,7 +8,7 @@ import { useCurrentUser } from './hooks/useCurrentUser'
 
 function App() {
   const isAuthenticated = useIsAuthenticated()
-  const { user, loading } = useCurrentUser()
+  const { user, loading, error, notRegistered } = useCurrentUser()
   const isAdmin = user?.roles.includes('Admin') ?? false
 
   return (
@@ -23,7 +23,7 @@ function App() {
           isAuthenticated ? (
             <>
               <NavBar isAdmin={isAdmin} />
-              <HomePage />
+              <HomePage user={user} error={error} notRegistered={notRegistered} />
             </>
           ) : (
             <Navigate to="/" replace />

@@ -30,11 +30,9 @@ type ApiUser = {
   id: string
   email: string
   displayName: string
-  role: number
+  role: 'Admin' | 'Agent'
   createdAt: string
 }
-
-const roleLabels: Record<number, string> = { 0: 'Admin', 1: 'Agent' }
 
 function AdminUsersPage() {
   const { instance } = useMsal()
@@ -146,9 +144,7 @@ function AdminUsersPage() {
               <TableCell>{u.displayName}</TableCell>
               <TableCell>{u.email}</TableCell>
               <TableCell>
-                <Badge variant={u.role === 0 ? 'default' : 'secondary'}>
-                  {roleLabels[u.role] ?? u.role}
-                </Badge>
+                <Badge variant={u.role === 'Admin' ? 'default' : 'secondary'}>{u.role}</Badge>
               </TableCell>
             </TableRow>
           ))}

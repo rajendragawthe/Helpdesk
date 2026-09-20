@@ -25,6 +25,7 @@ public class TicketRepository(HelpdeskDbContext dbContext) : ITicketRepository
     public async Task<IReadOnlyList<Ticket>> GetAllAsync()
     {
         return await dbContext.Tickets
+            .AsNoTracking()
             .Include(t => t.Classification)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();

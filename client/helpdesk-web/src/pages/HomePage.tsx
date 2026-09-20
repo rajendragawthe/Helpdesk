@@ -1,10 +1,15 @@
 import { useMsal } from '@azure/msal-react'
-import { useCurrentUser } from '../hooks/useCurrentUser'
+import type { CurrentUser } from '../hooks/useCurrentUser'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
-function HomePage() {
+type HomePageProps = {
+  user: CurrentUser | null
+  error: string | null
+  notRegistered: boolean
+}
+
+function HomePage({ user, error, notRegistered }: HomePageProps) {
   const { accounts } = useMsal()
-  const { user, error, notRegistered } = useCurrentUser()
 
   const displayName = user?.name ?? accounts[0]?.name ?? accounts[0]?.username ?? ''
 
