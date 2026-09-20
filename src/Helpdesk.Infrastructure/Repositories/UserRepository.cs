@@ -17,6 +17,11 @@ public class UserRepository(HelpdeskDbContext dbContext) : IUserRepository
         return await dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
     }
 
+    public async Task<User?> GetByExternalObjectIdAsync(string externalObjectId)
+    {
+        return await dbContext.Users.FirstOrDefaultAsync(u => u.ExternalObjectId == externalObjectId);
+    }
+
     public async Task<IReadOnlyList<User>> GetAllAsync()
     {
         return await dbContext.Users.OrderBy(u => u.DisplayName).ToListAsync();
@@ -25,6 +30,12 @@ public class UserRepository(HelpdeskDbContext dbContext) : IUserRepository
     public async Task AddAsync(User user)
     {
         dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+    }
+
+    public async Task UpdateAsync(User user)
+    {
+        dbContext.Users.Update(user);
         await dbContext.SaveChangesAsync();
     }
 }
