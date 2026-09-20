@@ -2,14 +2,14 @@ using Helpdesk.Core.Entities;
 using Helpdesk.Core.Enums;
 using Helpdesk.Core.Interfaces;
 using Helpdesk.Core.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Helpdesk.Application.EmailIngestion;
 
 public class EmailIngestionService(
     IMailClient mailClient,
-    ITicketRepository ticketRepository,
-    IMessageRepository messageRepository,
+    IServiceScopeFactory scopeFactory,
     ILogger<EmailIngestionService> logger)
 {
     public async Task IngestNewEmailsAsync(CancellationToken cancellationToken = default)
@@ -29,7 +29,15 @@ public class EmailIngestionService(
         {
             try
             {
-                await ProcessEmailAsync(email);
+                // Each message gets its own DI scope (and therefore its own HelpdeskDbContext),
+                // so a persistence failure for one message (e.g. a constraint violation) can't
+                // leave a poisoned entity in a shared change tracker that then blocks every
+                // subsequent message in the same tick.
+                using var scope = scopeFactory.CreateScope();
+                var ticketRepository = scope.ServiceProvider.GetRequiredService<ITicketRepository>();
+                var messageRepository = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
+
+                await ProcessEmailAsync(email, ticketRepository, messageRepository);
             }
             catch (Exception ex)
             {
@@ -42,7 +50,10 @@ public class EmailIngestionService(
         }
     }
 
-    private async Task ProcessEmailAsync(InboundEmailMessage email)
+    private async Task ProcessEmailAsync(
+        InboundEmailMessage email,
+        ITicketRepository ticketRepository,
+        IMessageRepository messageRepository)
     {
         var existingMessage = await messageRepository.GetByExternalMessageIdAsync(email.ExternalMessageId);
         if (existingMessage is not null)

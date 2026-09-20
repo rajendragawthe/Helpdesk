@@ -15,6 +15,11 @@ public class EmailIngestionBackgroundService(
         var intervalSeconds = int.TryParse(configuration["GraphApi:PollingIntervalSeconds"], out var seconds)
             ? seconds
             : 60;
+
+        // Guard against a misconfigured (zero or negative) polling interval crashing the
+        // host via PeriodicTimer's constructor before the tick loop's try/catch even runs.
+        intervalSeconds = Math.Max(1, intervalSeconds);
+
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds));
 
         do

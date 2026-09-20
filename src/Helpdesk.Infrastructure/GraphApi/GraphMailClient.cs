@@ -1,11 +1,12 @@
 using Helpdesk.Core.Interfaces;
 using Helpdesk.Core.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 
 namespace Helpdesk.Infrastructure.GraphApi;
 
-public class GraphMailClient(GraphServiceClient graphClient, GraphApiOptions options) : IMailClient
+public class GraphMailClient(GraphServiceClient graphClient, GraphApiOptions options, ILogger<GraphMailClient> logger) : IMailClient
 {
     public async Task<IReadOnlyList<InboundEmailMessage>> FetchNewMessagesAsync(CancellationToken cancellationToken = default)
     {
@@ -18,9 +19,18 @@ public class GraphMailClient(GraphServiceClient graphClient, GraphApiOptions opt
                 requestConfig.QueryParameters.Orderby = ["receivedDateTime asc"];
                 requestConfig.QueryParameters.Select =
                     ["id", "conversationId", "from", "subject", "body", "receivedDateTime"];
+                requestConfig.QueryParameters.Top = 50;
             }, cancellationToken);
 
         var messages = response?.Value ?? [];
+
+        foreach (var malformed in messages.Where(m => m.Id is null || m.ConversationId is null))
+        {
+            logger.LogWarning(
+                "Skipping malformed Graph message missing Id or ConversationId. Subject={Subject}, ReceivedDateTime={ReceivedDateTime}",
+                malformed.Subject,
+                malformed.ReceivedDateTime);
+        }
 
         return messages
             .Where(m => m.Id is not null && m.ConversationId is not null)

@@ -22,7 +22,8 @@ public class EmailIngestionServiceTests
         var mailClient = new FakeMailClient(email);
         var ticketRepository = new FakeTicketRepository();
         var messageRepository = new FakeMessageRepository();
-        var service = new EmailIngestionService(mailClient, ticketRepository, messageRepository, NullLogger<EmailIngestionService>.Instance);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, messageRepository);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
 
         await service.IngestNewEmailsAsync();
 
@@ -66,7 +67,8 @@ public class EmailIngestionServiceTests
         var ticketRepository = new FakeTicketRepository();
         ticketRepository.Tickets.Add(existingTicket);
         var messageRepository = new FakeMessageRepository();
-        var service = new EmailIngestionService(mailClient, ticketRepository, messageRepository, NullLogger<EmailIngestionService>.Instance);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, messageRepository);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
 
         await service.IngestNewEmailsAsync();
 
@@ -102,7 +104,8 @@ public class EmailIngestionServiceTests
             ExternalMessageId = "msg-1",
             ReceivedAt = DateTimeOffset.UtcNow,
         });
-        var service = new EmailIngestionService(mailClient, ticketRepository, messageRepository, NullLogger<EmailIngestionService>.Instance);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, messageRepository);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
 
         await service.IngestNewEmailsAsync();
 
@@ -133,7 +136,8 @@ public class EmailIngestionServiceTests
         var mailClient = new FakeMailClient(failingEmail, okEmail);
         var ticketRepository = new FakeTicketRepository();
         var messageRepository = new FakeMessageRepository { ThrowOnAddForExternalMessageId = "msg-fail" };
-        var service = new EmailIngestionService(mailClient, ticketRepository, messageRepository, NullLogger<EmailIngestionService>.Instance);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, messageRepository);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
 
         await service.IngestNewEmailsAsync();
 
@@ -154,5 +158,54 @@ public class EmailIngestionServiceTests
         Assert.Equal("msg-ok", message.ExternalMessageId);
 
         Assert.Equal(["msg-ok"], mailClient.MarkedAsProcessed);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_FirstMessagePoisoned_SecondMessageStillProcessedInItsOwnScope()
+    {
+        // Regression test for the shared-DbContext-per-tick bug: previously
+        // EmailIngestionService held ITicketRepository/IMessageRepository via constructor
+        // injection, so every message in a tick shared the same repository/DbContext
+        // instance. If the FIRST message's persistence failed, a poisoned change tracker
+        // could block every subsequent message in the same tick from being saved too
+        // (Graph returns unread messages oldest-first, so the poisoned message is always
+        // the OLDEST and is never marked read/removed from the unread set).
+        //
+        // Now each message is processed in its own DI scope with its own repositories
+        // (its own HelpdeskDbContext in production), so a failure processing the first
+        // message cannot affect the second message's scope at all.
+        var poisonedFirstEmail = new InboundEmailMessage(
+            ExternalMessageId: "msg-poisoned-first",
+            ConversationId: "conv-poisoned",
+            FromAddress: "first@example.com",
+            Subject: "First and poisoned",
+            BodyHtml: "<p>boom</p>",
+            ReceivedAt: DateTimeOffset.UtcNow.AddMinutes(-1));
+
+        var secondEmail = new InboundEmailMessage(
+            ExternalMessageId: "msg-second",
+            ConversationId: "conv-second",
+            FromAddress: "second@example.com",
+            Subject: "Second, should still succeed",
+            BodyHtml: "<p>fine</p>",
+            ReceivedAt: DateTimeOffset.UtcNow);
+
+        var mailClient = new FakeMailClient(poisonedFirstEmail, secondEmail);
+        var ticketRepository = new FakeTicketRepository();
+        var messageRepository = new FakeMessageRepository { ThrowOnAddForExternalMessageId = "msg-poisoned-first" };
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, messageRepository);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        // Exactly two scopes were created - one per message - proving no two messages
+        // in this tick shared a scope (and therefore, in production, no shared DbContext).
+        Assert.Equal(2, scopeFactory.ScopesCreated);
+
+        var secondTicket = Assert.Single(ticketRepository.Tickets, t => t.ConversationId == "conv-second");
+        var secondMessage = Assert.Single(messageRepository.Messages);
+        Assert.Equal(secondTicket.Id, secondMessage.TicketId);
+        Assert.Equal("msg-second", secondMessage.ExternalMessageId);
+        Assert.Equal(["msg-second"], mailClient.MarkedAsProcessed);
     }
 }

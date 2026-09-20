@@ -43,6 +43,11 @@ export default defineConfig({
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: BACKEND_URL,
         ConnectionStrings__DefaultConnection: TEST_DB_CONNECTION_STRING,
+        // Explicitly disable Graph email ingestion for E2E runs. appsettings.Development.json
+        // has a real GraphApi section (non-secret ids), so an empty/unset env var wouldn't
+        // reliably "unset" it via ASP.NET Core's config layering - GraphApi:Enabled=false is
+        // checked explicitly by AddGraphApi/AddApplication's presence check and always wins.
+        GraphApi__Enabled: 'false',
       },
     },
     {
