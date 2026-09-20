@@ -15,6 +15,12 @@ public class MessageRepository(HelpdeskDbContext dbContext) : IMessageRepository
             .ToListAsync();
     }
 
+    public async Task<Message?> GetByExternalMessageIdAsync(string externalMessageId)
+    {
+        return await dbContext.Messages
+            .FirstOrDefaultAsync(m => m.ExternalMessageId == externalMessageId);
+    }
+
     public async Task AddAsync(Message message)
     {
         dbContext.Messages.Add(message);

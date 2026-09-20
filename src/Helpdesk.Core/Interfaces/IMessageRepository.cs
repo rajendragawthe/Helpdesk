@@ -5,5 +5,6 @@ namespace Helpdesk.Core.Interfaces;
 public interface IMessageRepository
 {
     Task<IReadOnlyList<Message>> GetByTicketIdAsync(Guid ticketId);
+    Task<Message?> GetByExternalMessageIdAsync(string externalMessageId);
     Task AddAsync(Message message);
 }
