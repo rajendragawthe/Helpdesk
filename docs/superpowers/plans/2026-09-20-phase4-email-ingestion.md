@@ -928,7 +928,7 @@ This task has no code changes — it's the manual prerequisite plus the manual t
 
 In the Entra admin center (`entra.microsoft.com` → App registrations):
 1. New registration, any name (e.g. `Helpdesk Graph Mail Access`), single tenant.
-2. API permissions → Add a permission → Microsoft Graph → **Application permissions** → add `Mail.Read` and `Mail.Send`.
+2. API permissions → Add a permission → Microsoft Graph → **Application permissions** → add `Mail.ReadWrite` and `Mail.Send` (`Mail.Read` alone is insufficient — confirmed by a real `Access is denied` failure on the mark-as-processed PATCH call during E2E testing; marking a message read requires write access).
 3. Click **Grant admin consent** for the tenant (requires admin rights on the tenant).
 4. Certificates & secrets → New client secret → copy the **value** immediately (it's shown once).
 5. Note the **Application (client) ID** and **Directory (tenant) ID** from the Overview page.

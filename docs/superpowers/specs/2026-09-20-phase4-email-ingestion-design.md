@@ -161,6 +161,10 @@ anyway).
 | Mapping/persistence fails for one message | Caught, logged with message id, loop continues to next message; message stays unread in the mailbox and will be retried next tick |
 | `MarkAsProcessedAsync` fails after successful ticket/message creation | Logged; message stays unread and will be re-fetched next tick — the `GetByExternalMessageIdAsync` dedupe check in step 2a prevents a duplicate `Ticket`/`Message` from being created on the retry |
 
+### Accepted risk: `isRead` as the "already ingested" marker
+
+Using `isRead = true` as the sole signal that a message has been ingested means the poller cannot distinguish "we processed this" from "a human (or a rule) marked it read some other way" — e.g. an agent previewing the shared mailbox in Outlook, a mobile mail client marking messages read on open, or a forwarding/triage rule. Any message marked read before a poll runs is silently excluded from the `isRead eq false` filter and is never ingested, with no ticket, no log line, and no record it ever existed. This is an accepted risk for the MVP's polling-based design (a dedicated "processed" marker — a category, a custom property, or an external cursor — would avoid it but adds complexity not justified yet), not a bug; it's recorded here so it isn't forgotten before this becomes an operational dependency.
+
 ## Testing
 
 - **Unit tests** in a new `tests/Helpdesk.Application.Tests` project
