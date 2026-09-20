@@ -76,6 +76,9 @@ Four .NET projects under `src/`, referenced via `Helpdesk.slnx`:
 - `Helpdesk.Infrastructure` — implements `Helpdesk.Core` interfaces: EF Core `HelpdeskDbContext` + migrations (`Data/Migrations`), repositories (`Repositories/`), a dev-only `DbSeeder`, the Microsoft Graph email client, and the OpenRouter AI client. `DependencyInjection.cs` exposes `AddInfrastructure(IConfiguration)`, which registers the DbContext (Npgsql) and repositories as scoped services — call this from `Program.cs` rather than registering them inline.
 - `Helpdesk.Api` — ASP.NET Core Web API, controller-based (not Minimal API) by explicit choice. References `Application` for business logic and `Infrastructure` only for DI/composition-root wiring in `Program.cs` (via `AddInfrastructure`) — controllers should not call Infrastructure types directly.
 
+### Request validation
+Request DTOs are validated with **FluentValidation** (`FluentValidation.AspNetCore`), wired up in `Program.cs` via `AddValidatorsFromAssemblyContaining<Program>()` + `AddFluentValidationAutoValidation()` — validators are picked up automatically from the `Helpdesk.Api` assembly, no per-endpoint registration needed. A failing validator short-circuits with a `400` and a standard `ValidationProblemDetails` body before the action runs, so controllers should not hand-roll null/whitespace checks on request bodies. Validators live alongside the API in `Helpdesk.Api/Validators/` (e.g. `CreateUserRequestValidator.cs` for `UsersController`'s `CreateUserRequest`) — add one per new request DTO rather than validating inline.
+
 When adding a feature: define the interface/entity in `Core`, implement it in `Infrastructure`, orchestrate it in `Application`, and expose it via a controller in `Api`.
 
 Note: the single `User` entity/table holds both Admin and Agent accounts, distinguished by the `Role` enum — there is no separate "Agent" entity.

@@ -21,11 +21,6 @@ public class UsersController(IUserRepository userRepository) : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.DisplayName))
-        {
-            return BadRequest("Email and DisplayName are required.");
-        }
-
         var existing = await userRepository.GetByEmailAsync(request.Email);
         if (existing is not null)
         {
