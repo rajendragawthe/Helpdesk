@@ -26,10 +26,20 @@ export function useCurrentUser(): UseCurrentUserResult {
     let cancelled = false
 
     async function load() {
-      if (accounts[0]) {
-        instance.setActiveAccount(accounts[0])
+      if (!accounts[0]) {
+        // MSAL hasn't hydrated an account yet — e.g. MsalProvider is still resolving the
+        // cached session on a cold page load, briefly reporting no accounts even though a
+        // session exists. This isn't "not signed in", just not ready yet: stay in the
+        // loading state and let this effect re-run once `accounts` is populated, rather
+        // than calling apiFetch (which throws "no active account") and reporting a false
+        // error/not-registered state for what is actually a timing gap.
+        setLoading(true)
+        return
       }
+      instance.setActiveAccount(accounts[0])
       setLoading(true)
+      setError(null)
+      setNotRegistered(false)
       try {
         const response = await apiFetch(instance, '/api/auth/me')
         if (!response.ok) {

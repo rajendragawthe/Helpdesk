@@ -13,6 +13,14 @@ export default defineConfig({
   use: {
     baseURL: FRONTEND_URL,
     trace: 'on-first-retry',
+    // Optional escape hatch for environments where `npx playwright install` can't reach
+    // playwright.dev's CDN to fetch the separate chrome-headless-shell binary (only the full
+    // Chromium browser got downloaded) — point this at an already-installed chrome.exe/chrome
+    // binary to run headless tests against that instead. Unset by default; normal setups
+    // following e2e/README.md's `npx playwright install --with-deps chromium` never need it.
+    launchOptions: process.env.E2E_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH }
+      : undefined,
   },
   projects: [
     {

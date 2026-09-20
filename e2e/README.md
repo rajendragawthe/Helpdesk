@@ -12,6 +12,18 @@ npm install
 npx playwright install --with-deps chromium
 ```
 
+If `playwright install` can't reach playwright.dev's CDN in your environment
+(e.g. a sandboxed/TLS-intercepted network) and only the full Chromium binary
+downloads successfully (not the separate `chrome-headless-shell`), point
+tests at the Chromium binary that did download instead of failing outright:
+
+```
+E2E_CHROMIUM_EXECUTABLE_PATH="/path/to/chrome" npm run test:e2e
+```
+
+See `playwright.config.ts`'s `use.launchOptions` — unset by default, this has
+no effect on a normal setup.
+
 ## Test database
 
 This points at a `helpdesk_test` database on the same local Postgres
@@ -54,7 +66,31 @@ overridden via `E2E_FRONTEND_URL`, `E2E_BACKEND_URL`, `E2E_DB_HOST`,
 ## Known gap: Entra ID auth
 
 The app authenticates via real Microsoft Entra ID SSO (MSAL + JWT bearer,
-see root `CLAUDE.md`). There is no test identity provider wired up yet, so
-tests that need an authenticated session will need a strategy for that
-(e.g. a mocked auth flow or a dedicated test tenant) before they can be
-written.
+see root `CLAUDE.md`). There is no test identity provider wired up, so any
+scenario that requires a *real, validly-signed* Entra token — the backend
+actually issuing a 200 from `/api/auth/me`, the `HelpdeskUserClaimsTransformation`
+first-login `ExternalObjectId` backfill, or a genuine `AdminOnly`/`AgentOnly`
+success path — cannot be exercised end-to-end here. This would need either a
+dedicated Entra test tenant with a service-principal-driven ROPC/client-credentials
+flow, or a minimal test-only ASP.NET Core auth handler gated behind a
+non-Development/non-Production `ASPNETCORE_ENVIRONMENT=Testing`, added
+deliberately (not as an unreviewed bypass).
+
+`tests/auth/` works around this gap two ways instead:
+- **Frontend-only scenarios** (`not-registered-user.spec.ts`,
+  `role-based-access.spec.ts`, `session-expiry-and-errors.spec.ts`,
+  `multi-tab-session-isolation.spec.ts`) use `tests/auth/msal-mock.ts` to
+  fabricate a *working* `@azure/msal-browser` sessionStorage cache (a real
+  account + a real, unexpired cached access token — verified against
+  `BrowserCacheManager`'s actual cache-key format, not guessed at) so
+  `useIsAuthenticated()` is true and `apiFetch` resolves a token from cache
+  with **no network call to Microsoft at all**, and mock `/api/auth/me` (and
+  other `/api/*` calls) via `page.route()`. The fake access token is never
+  validated by anything — it only ever reaches `page.route()` mocks, never
+  the real backend — so this never bypasses real auth, it only drives the
+  SPA's own state machine.
+- **Negative API-layer scenarios** (`unauthenticated-access.spec.ts`,
+  `api-authorization-edge-cases.spec.ts`) hit the real backend directly with
+  no/malformed/tampered Authorization headers, which is fully testable
+  without an IdP since JWT bearer validation rejects all of them before
+  `HelpdeskUserClaimsTransformation` (or any controller) ever runs.

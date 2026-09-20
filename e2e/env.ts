@@ -13,3 +13,17 @@ export const TEST_DB = {
 // Derived from TEST_DB so the values the app connects with and the values
 // global-setup truncates can never drift apart.
 export const TEST_DB_CONNECTION_STRING = `Host=${TEST_DB.host};Port=${TEST_DB.port};Database=${TEST_DB.database};Username=${TEST_DB.user};Password=${TEST_DB.password}`
+
+// Real Entra ID app registration values from client/helpdesk-web/.env (see authConfig.ts).
+// There is no test identity provider, so these are never used to talk to Entra directly in
+// tests — the auth suite (tests/auth/) only uses them to shape the *keys* of a fabricated
+// MSAL cache entry (see tests/auth/msal-mock.ts) so a page loads with `useIsAuthenticated()`
+// already true, without a real interactive login. Override via E2E_AZURE_AD_* if the app
+// registration ever changes, to keep this in sync with the frontend's .env.
+export const AZURE_AD = {
+  tenantId: process.env.E2E_AZURE_AD_TENANT_ID ?? 'fdcd3b62-88bb-4c4c-bc7e-fdf7f96d8eab',
+  clientId: process.env.E2E_AZURE_AD_CLIENT_ID ?? '7136d9f7-9b51-43ab-b709-169766875c22',
+  apiScope:
+    process.env.E2E_AZURE_AD_API_SCOPE ??
+    'api://d585cb8a-9620-4428-8d24-79d6abaf989d/access_as_user',
+}
