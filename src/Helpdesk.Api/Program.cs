@@ -2,9 +2,11 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Helpdesk.Api.Auth;
+using Helpdesk.Application;
 using Helpdesk.Core.Enums;
 using Helpdesk.Infrastructure;
 using Helpdesk.Infrastructure.Data;
+using Helpdesk.Infrastructure.GraphApi;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
@@ -22,6 +24,8 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddOpenApi();
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddGraphApi(builder.Configuration);
+builder.Services.AddApplication();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
