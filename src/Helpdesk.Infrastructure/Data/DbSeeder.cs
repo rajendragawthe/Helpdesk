@@ -36,6 +36,11 @@ public static class DbSeeder
             await dbContext.SaveChangesAsync();
         }
 
+        if (!isDevelopment)
+        {
+            return;
+        }
+
         if (!await dbContext.Users.AnyAsync(u => u.Email == "epm1@prosaressolutions.onmicrosoft.com"))
         {
             dbContext.Users.Add(new User
@@ -60,11 +65,6 @@ public static class DbSeeder
                 CreatedAt = DateTimeOffset.UtcNow
             });
             await dbContext.SaveChangesAsync();
-        }
-
-        if (!isDevelopment)
-        {
-            return;
         }
 
         var agentUser = await dbContext.Users.FirstAsync(u => u.Role == Role.Agent);
