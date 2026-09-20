@@ -35,3 +35,6 @@ npm install
 npm run dev
 ```
 Runs at `http://localhost:5173`.
+
+### Email ingestion (optional)
+The backend runs fine with no `GraphApi` config — the Microsoft Graph email poller is opt-in and simply stays disabled. To enable it, see `CLAUDE.md`'s "Email ingestion (Phase 4 done)" section for the required Entra app registration and config.
