@@ -13,10 +13,12 @@ AI-assisted support ticket system. See `project-scope.md` for scope, `tech-stack
 ## Local setup
 
 ### Database
+Uses a local PostgreSQL instance (not Docker) on `localhost:5432`:
 ```
-docker compose up -d
+createuser -s helpdesk
+createdb -O helpdesk helpdesk
+psql -c "ALTER ROLE helpdesk WITH PASSWORD 'helpdesk';"
 ```
-Starts Postgres on `localhost:5432` (db `helpdesk`, user/password `helpdesk`).
 
 ### Backend
 ```

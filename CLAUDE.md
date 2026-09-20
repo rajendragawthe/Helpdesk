@@ -12,10 +12,12 @@ AI-assisted support ticket system (MVP stage). Full context lives in three docs 
 ## Commands
 
 ### Database
+Uses a local PostgreSQL instance (not Docker) on `localhost:5432`. One-time setup, with `psql`/`createdb`/`createuser` on PATH:
 ```
-docker compose up -d
+createuser -s helpdesk
+createdb -O helpdesk helpdesk
 ```
-Starts Postgres on `localhost:5432` (db/user/password: `helpdesk`).
+Set the `helpdesk` role's password to `helpdesk` (e.g. `psql -c "ALTER ROLE helpdesk WITH PASSWORD 'helpdesk';"`) to match `appsettings.Development.json`'s connection string.
 
 ### Backend (`src/Helpdesk.Api`)
 ```
@@ -49,6 +51,16 @@ Run a single test (xUnit filter):
 ```
 dotnet test --filter "FullyQualifiedName~Helpdesk.Core.Tests.SomeTestClass.SomeTestMethod"
 ```
+
+### E2E tests (`e2e/`)
+Playwright, full-stack, against an isolated `helpdesk_test` database on the same local Postgres instance as dev (`localhost:5432`) — never the dev database itself.
+```
+cd e2e
+npm install
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+`playwright.config.ts` starts the API and Vite dev server itself via `webServer`, pointing the API's connection string at `helpdesk_test`. See `e2e/README.md` for the DB creation/migration command and the current gap (no test identity provider for the real Entra ID login flow yet).
 
 ### Frontend (`client/helpdesk-web`)
 ```

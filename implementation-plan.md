@@ -5,7 +5,7 @@
 2. Wire project references (Api → Application → Core; Infrastructure → Core)
 3. Add PostgreSQL + EF Core NuGet packages to `Helpdesk.Infrastructure`
 4. Scaffold React + TypeScript + Vite app in `client/helpdesk-web`
-5. Set up local dev config: `appsettings.Development.json`, `.env` for frontend, local Postgres (Docker Compose)
+5. Set up local dev config: `appsettings.Development.json`, `.env` for frontend, local Postgres instance
 6. Set up Git repo, `.gitignore`, base README
 
 ## Phase 1 — Auth (Entra SSO) — done
