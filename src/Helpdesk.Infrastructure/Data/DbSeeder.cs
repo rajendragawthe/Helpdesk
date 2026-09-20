@@ -36,6 +36,32 @@ public static class DbSeeder
             await dbContext.SaveChangesAsync();
         }
 
+        if (!await dbContext.Users.AnyAsync(u => u.Email == "epm1@prosaressolutions.onmicrosoft.com"))
+        {
+            dbContext.Users.Add(new User
+            {
+                Id = Guid.NewGuid(),
+                Email = "epm1@prosaressolutions.onmicrosoft.com",
+                DisplayName = "Admin User 1",
+                Role = Role.Admin,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        if (!await dbContext.Users.AnyAsync(u => u.Email == "epm2@prosaressolutions.onmicrosoft.com"))
+        {
+            dbContext.Users.Add(new User
+            {
+                Id = Guid.NewGuid(),
+                Email = "epm2@prosaressolutions.onmicrosoft.com",
+                DisplayName = "Agent User1",
+                Role = Role.Agent,
+                CreatedAt = DateTimeOffset.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
         if (!isDevelopment)
         {
             return;
