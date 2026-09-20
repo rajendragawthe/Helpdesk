@@ -8,7 +8,7 @@
 5. Set up local dev config: `appsettings.Development.json`, `.env` for frontend, local Postgres (Docker Compose)
 6. Set up Git repo, `.gitignore`, base README
 
-## Phase 1 — Auth (Entra SSO)
+## Phase 1 — Auth (Entra SSO) — done
 7. Register app in Entra ID (API app registration + SPA app registration)
 8. Add Microsoft Identity Web to `Helpdesk.Api`, configure JWT bearer validation
 9. Define `Role` enum (Admin, Agent) and claim mapping from Entra token
@@ -16,19 +16,20 @@
 11. Add `[Authorize]` policies for Admin-only and Agent-only endpoints
 12. Manual test: login as admin, confirm token reaches API and role claim is readable
 
-## Phase 2 — Core Domain & Data Model
-13. Define entities in `Helpdesk.Core/Entities`: `Ticket`, `Message`, `Agent`, `Classification`
+## Phase 2 — Core Domain & Data Model — done
+13. Define entities in `Helpdesk.Core/Entities`: `Ticket`, `Message`, `User`, `Classification` (`User` holds both Admin and Agent accounts, distinguished by `Role` — there is no separate Agent entity)
 14. Define `TicketStatus` enum (New, InReview, Replied)
-15. Define repository interfaces in `Helpdesk.Core/Interfaces` (`ITicketRepository`, `IAgentRepository`, `IMessageRepository`)
+15. Define repository interfaces in `Helpdesk.Core/Interfaces` (`ITicketRepository`, `IUserRepository`, `IMessageRepository`)
 16. Implement `HelpdeskDbContext` in `Helpdesk.Infrastructure/Data` with entity configurations
 17. Generate and apply initial EF Core migration
 18. Implement repository classes in `Helpdesk.Infrastructure/Repositories`
-19. Register DbContext + repositories in DI (`Helpdesk.Api/Program.cs`)
+19. Register DbContext + repositories in DI via `Helpdesk.Infrastructure/DependencyInjection.cs` (`AddInfrastructure(IConfiguration)`), called from `Helpdesk.Api/Program.cs`
+19a. Seed dev data via `Helpdesk.Infrastructure/Data/DbSeeder.cs` (first Admin user, sample Agent user, sample tickets) — runs on API startup if `Users` table is empty
 
 ## Phase 3 — Minimal User Management (Admin adds Agents)
-20. `AgentsController`: `POST /api/agents` (admin-only, create agent record), `GET /api/agents` (list)
-21. Agent creation flow: admin enters agent's Entra email; record stored with Role = Agent, linked by email/object ID at first login
-22. Frontend: simple "Add Agent" form + agent list page (admin-only route)
+20. `UsersController`: `POST /api/users` (admin-only, create a `User` record with Role = Agent), `GET /api/users` (list)
+21. Agent creation flow: admin enters the agent's Entra email; `User` record stored with Role = Agent, linked by email/object ID at first login
+22. Frontend: simple "Add Agent" form + user list page (admin-only route)
 23. Manual test: admin adds an agent, agent logs in via SSO and is recognized with Agent role
 
 ## Phase 4 — Email Ingestion (Microsoft Graph)

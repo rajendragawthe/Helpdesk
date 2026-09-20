@@ -1,4 +1,6 @@
 using Helpdesk.Core.Enums;
+using Helpdesk.Infrastructure;
+using Helpdesk.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
 
@@ -9,6 +11,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -21,6 +25,12 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<HelpdeskDbContext>();
+    await DbSeeder.SeedAsync(dbContext, app.Environment.IsDevelopment());
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -18,5 +18,9 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 
+# Local run logs
+.backend.log
+.frontend.log
+
 # IDE
 .idea/

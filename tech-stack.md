@@ -23,13 +23,16 @@ Helpdesk.sln
 │   │   └── appsettings.json
 │   │
 │   ├── Helpdesk.Core/                # Domain layer — no EF/infra dependencies
-│   │   ├── Entities/                 # Ticket, Message, Agent, Classification, etc.
-│   │   ├── Enums/                    # TicketStatus (New/InReview/Replied), Role
-│   │   └── Interfaces/               # IRepository<T>, ITicketRepository, IEmailIngestionService, IAiService, etc.
+│   │   ├── Entities/                 # Ticket, Message, User, Classification, etc. (User holds both Admin and Agent accounts, via Role)
+│   │   ├── Enums/                    # TicketStatus (New/InReview/Replied), Role (Admin/Agent)
+│   │   └── Interfaces/               # ITicketRepository, IUserRepository, IMessageRepository, IEmailIngestionService, IAiService, etc.
 │   │
 │   ├── Helpdesk.Infrastructure/      # EF Core, repositories, external integrations
+│   │   ├── DependencyInjection.cs    # AddInfrastructure(IConfiguration) — registers DbContext + repositories as scoped services
 │   │   ├── Data/
 │   │   │   ├── HelpdeskDbContext.cs
+│   │   │   ├── Configurations/       # IEntityTypeConfiguration<T> per entity
+│   │   │   ├── DbSeeder.cs           # dev-only seed data (first Admin user, sample tickets)
 │   │   │   └── Migrations/
 │   │   ├── Repositories/             # EF Core implementations of Core interfaces
 │   │   ├── GraphApi/                 # Microsoft Graph email ingestion client
