@@ -19,11 +19,11 @@ public class EmailIngestionBackgroundService(
 
         do
         {
-            using var scope = scopeFactory.CreateScope();
-            var ingestionService = scope.ServiceProvider.GetRequiredService<EmailIngestionService>();
-
             try
             {
+                using var scope = scopeFactory.CreateScope();
+                var ingestionService = scope.ServiceProvider.GetRequiredService<EmailIngestionService>();
+
                 await ingestionService.IngestNewEmailsAsync(stoppingToken);
             }
             catch (Exception ex)
