@@ -56,8 +56,14 @@ Graph access uses **app-only auth** (client credentials flow), a
 **separate Entra app registration** from the one already configured
 under `AzureAd` in `appsettings.json` — that one validates incoming
 user JWTs for the API; this one is a `ClientSecretCredential` used to
-call Graph as the application itself, with `Mail.Read` and `Mail.Send`
-(needed later in Phase 7) application permissions and admin consent.
+call Graph as the application itself, with `Mail.ReadWrite` and
+`Mail.Send` (needed later in Phase 7) application permissions and admin
+consent. **Correction from the original design:** `Mail.Read` alone is
+not sufficient — `IMailClient.MarkAsProcessedAsync` PATCHes a message's
+`isRead` property, which Graph requires `Mail.ReadWrite` for; this was
+only discovered during real E2E testing (a `Mail.Read`-only app
+registration got `Access is denied` on the mark-as-processed call after
+successfully fetching messages).
 
 New `GraphApi` config section:
 - `TenantId`, `ClientId`, `MailboxAddress` — non-secret, go in
@@ -75,8 +81,9 @@ Bound to a `GraphApiOptions` class via `IOptions<GraphApiOptions>` in
 Before end-to-end testing is possible:
 1. Register a new Entra app (or reuse an existing app-only app if the
    user already has one) for Graph access.
-2. Add **application** permissions `Mail.Read` and `Mail.Send` (Microsoft
-   Graph), then grant admin consent.
+2. Add **application** permissions `Mail.ReadWrite` and `Mail.Send`
+   (Microsoft Graph), then grant admin consent. (`Mail.Read` is not
+   enough — see the correction above.)
 3. Create a client secret, note its value immediately (shown once).
 4. Note the `TenantId`, `ClientId`, and the target shared mailbox's
    email address.

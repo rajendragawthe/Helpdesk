@@ -33,14 +33,14 @@
 23. Manual test: admin adds an agent, agent logs in via SSO and is recognized with Agent role — pending manual verification against a real Entra account
 23a. Frontend restructured into routed pages (`react-router`) under `src/pages`; styling migrated to Tailwind CSS v4; shadcn/ui installed (blue theme) with all components under `src/components/ui`, and existing pages/NavBar updated to use shadcn `Button`/`Input`/`Label`/`Card`/`Table`/`Badge`/`Alert` in place of raw HTML — done
 
-## Phase 4 — Email Ingestion (Microsoft Graph)
-24. Register Graph API permissions (Mail.Read) on the app registration for the shared mailbox
-25. Implement Graph client in `Helpdesk.Infrastructure/GraphApi`
-26. Implement `IHostedService` background poller: fetch new/unread emails on an interval
-27. Map incoming email → `Ticket` + initial `Message` (subject, body, sender, received time)
-28. Handle threading: match reply emails (by conversationId) to existing ticket, append as new `Message`
-29. Mark processed emails as read/handled to avoid duplicate ingestion
-30. Manual test: send a test email to the mailbox, confirm a ticket is created; reply to it, confirm it threads onto the same ticket
+## Phase 4 — Email Ingestion (Microsoft Graph) — done
+24. Register Graph API permissions (`Mail.ReadWrite` and `Mail.Send`, application permissions, admin consent) on a dedicated app-only app registration for the shared mailbox — done. Note: `Mail.Read` alone is insufficient — marking a message as read (`PATCH .../messages/{id}` with `isRead: true`) requires `Mail.ReadWrite`, confirmed by a real `Access is denied` failure during E2E testing with `Mail.Read`-only.
+25. Implement Graph client in `Helpdesk.Infrastructure/GraphApi` — done (`GraphMailClient`, `GraphApiOptions`, `AddGraphApi` DI extension)
+26. Implement `IHostedService` background poller: fetch new/unread emails on an interval — done (`Helpdesk.Application/EmailIngestion/EmailIngestionBackgroundService`, default 60s, configurable via `GraphApi:PollingIntervalSeconds`)
+27. Map incoming email → `Ticket` + initial `Message` (subject, body, sender, received time) — done (`EmailIngestionService`)
+28. Handle threading: match reply emails (by conversationId) to existing ticket, append as new `Message` — done in code (matches by `ConversationId` via `ITicketRepository.GetByConversationIdAsync`); not yet exercised with a live reply email — see note below
+29. Mark processed emails as read/handled to avoid duplicate ingestion — done (`IMailClient.MarkAsProcessedAsync`, verified real messages no longer reprocessed on subsequent polls)
+30. Manual test: send a test email to the mailbox, confirm a ticket is created — done, verified 2026-09-21 against `epm1@prosaressolutions.onmicrosoft.com` (7 real unread emails ingested into 7 tickets/messages, correctly marked read afterward, zero errors on the following poll). Reply-threading half of this test (reply to an email, confirm it appends to the same ticket) was deliberately deferred rather than run in this session — the code path is implemented and covered by `EmailIngestionServiceTests`, but has not been exercised against a real Graph reply. Recommended before relying on this in production.
 
 ## Phase 5 — AI Classification & Summary
 31. Define `IAiService` interface in `Helpdesk.Core/Interfaces` (`ClassifyAsync`, `SummarizeAsync`, `DraftReplyAsync`)
