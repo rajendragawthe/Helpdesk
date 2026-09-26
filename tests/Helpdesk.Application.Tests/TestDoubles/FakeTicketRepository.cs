@@ -30,8 +30,11 @@ public class FakeTicketRepository : ITicketRepository
 
     public Exception? UpdateException { get; set; }
 
+    public int UpdateCount { get; private set; }
+
     public Task UpdateAsync(Ticket ticket)
     {
+        UpdateCount++;
         if (UpdateException is not null)
         {
             throw UpdateException;

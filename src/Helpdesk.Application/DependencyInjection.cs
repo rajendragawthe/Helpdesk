@@ -1,6 +1,7 @@
 using Helpdesk.Application.Classification;
 using Helpdesk.Application.DraftReply;
 using Helpdesk.Application.EmailIngestion;
+using Helpdesk.Application.Review;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -38,6 +39,13 @@ public static class DependencyInjection
         {
             services.AddScoped<IClassificationService, ClassificationService>();
             services.AddScoped<IDraftReplyService, DraftReplyService>();
+
+            // Review flags are derived from the classification and draft, so they only make sense when AI is on:
+            // with AI off nothing is classified or drafted and every ticket would look "failed". The threshold is
+            // parsed here (fail fast on a typo) and only when the gate is on, so a stray bad value cannot stop a
+            // host that has AI disabled from starting.
+            services.AddSingleton(ReviewOptions.Parse(configuration[ReviewOptions.ConfigKey]));
+            services.AddScoped<IReviewFlagService, ReviewFlagService>();
         }
 
         return services;
