@@ -26,6 +26,8 @@ public class AuthController : ControllerBase
         var email = User.FindFirstValue(ClaimTypes.Upn) ?? User.FindFirstValue("preferred_username");
         var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
 
-        return Ok(new { name, email, roles });
+        var id = User.FindFirstValue(HelpdeskUserClaimsTransformation.UserIdClaimType);
+
+        return Ok(new { id, name, email, roles });
     }
 }

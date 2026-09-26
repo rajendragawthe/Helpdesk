@@ -15,6 +15,7 @@ namespace Helpdesk.Api.Auth;
 public class HelpdeskUserClaimsTransformation(IUserRepository userRepository) : IClaimsTransformation
 {
     public const string RegisteredClaimType = "helpdesk_registered";
+    public const string UserIdClaimType = "helpdesk_user_id";
     private const string ProcessedClaimType = "helpdesk_claims_processed";
 
     public async Task<ClaimsPrincipal> TransformAsync(ClaimsPrincipal principal)
@@ -48,6 +49,7 @@ public class HelpdeskUserClaimsTransformation(IUserRepository userRepository) : 
         {
             identity.AddClaim(new Claim(RegisteredClaimType, "true"));
             identity.AddClaim(new Claim(ClaimTypes.Role, user.Role.ToString()));
+            identity.AddClaim(new Claim(UserIdClaimType, user.Id.ToString()));
         }
         else
         {
