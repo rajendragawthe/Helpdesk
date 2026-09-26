@@ -8,7 +8,7 @@
 
 **Tech Stack:** OpenRouter chat-completions over `HttpClient` (`Microsoft.Extensions.Http` typed client), `System.Text.Json`, EF Core (no schema change — `Classifications` table and one-to-one `Ticket`↔`Classification` already exist), xUnit with hand-written test doubles.
 
-**Spec:** `implementation-plan.md` Phase 5 (tasks 31–35) and `project-scope.md` MVP scope item 2. No separate design doc.
+**Spec:** `docs/superpowers/specs/2026-09-26-phase5-ai-classification-design.md` (written retrospectively after implementation; this plan was originally written from `implementation-plan.md` Phase 5 (tasks 31–35) and `project-scope.md` MVP scope item 2 with no design doc).
 
 ## Global Constraints
 
