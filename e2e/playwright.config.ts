@@ -48,6 +48,8 @@ export default defineConfig({
         // reliably "unset" it via ASP.NET Core's config layering - GraphApi:Enabled=false is
         // checked explicitly by AddGraphApi/AddApplication's presence check and always wins.
         GraphApi__Enabled: 'false',
+        // Same for OpenRouter AI classification: never call the real API from E2E runs.
+        OpenRouter__Enabled: 'false',
       },
     },
     {

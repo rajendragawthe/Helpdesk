@@ -5,6 +5,7 @@ using Helpdesk.Api.Auth;
 using Helpdesk.Application;
 using Helpdesk.Core.Enums;
 using Helpdesk.Infrastructure;
+using Helpdesk.Infrastructure.Ai;
 using Helpdesk.Infrastructure.Data;
 using Helpdesk.Infrastructure.GraphApi;
 using Microsoft.AspNetCore.Authentication;
@@ -25,6 +26,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddGraphApi(builder.Configuration);
+builder.Services.AddOpenRouter(builder.Configuration);
 builder.Services.AddApplication(builder.Configuration);
 
 builder.Services

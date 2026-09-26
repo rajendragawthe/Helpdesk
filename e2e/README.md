@@ -59,7 +59,9 @@ npm run test:e2e:headed # headed browser
 `playwright.config.ts`'s `webServer` entries launch `dotnet run` (API, with
 `ConnectionStrings__DefaultConnection` overridden to the test DB, and
 `GraphApi__Enabled=false` so the Phase 4 email-ingestion poller never runs
-against a real mailbox or writes into the test DB mid-run) and
+against a real mailbox or writes into the test DB mid-run, and
+`OpenRouter__Enabled=false` so AI classification never calls the real
+OpenRouter API) and
 `npm run dev` (frontend) automatically, and reuse them if already running
 locally. All of the target URLs and DB connection fields (`env.ts`) can be
 overridden via `E2E_FRONTEND_URL`, `E2E_BACKEND_URL`, `E2E_DB_HOST`,
