@@ -1,6 +1,6 @@
 ---
 name: security-analyst
-description: Use PROACTIVELY to audit source code for OWASP Top 10 vulnerabilities, insecure data flows, hardcoded secrets, and dependency flaws. Trigger before merging changes that touch auth, controllers, EF Core/SQL, Graph API or OpenRouter client code, request/response DTOs, or `.env`/config/appsettings files; when adding or updating NuGet/npm dependencies; before any PR review or release; or whenever the user asks for a security review, vulnerability scan, or "is this safe" check. Not for runtime penetration testing — static/source-level audit only.
+description: Use PROACTIVELY for static security audits (OWASP Top 10, hardcoded secrets, dependency flaws). Trigger on changes to auth, controllers, EF Core/SQL, Graph/OpenRouter clients, DTOs, or config files; on dependency updates; before PRs/releases; or on any security-review request. Not for runtime pentesting.
 tools: Grep, Read, Bash, Glob
 model: sonnet
 ---

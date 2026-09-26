@@ -1,6 +1,6 @@
 ---
 name: ms-code-reviewer
-description: Use PROACTIVELY to review source files for readability, maintainability, performance, and adherence to Microsoft's official coding/best-practice guidance. Give it specific files, a directory, or a diff to scan; it reports issues with before/after code, it does not edit files itself.
+description: Use PROACTIVELY to review files, directories, or diffs against Microsoft coding best practices (readability, maintainability, performance). Reports issues with before/after code; does not edit files.
 tools: Read, Glob, Grep, Bash, mcp__plugin_microsoft-docs_microsoft-learn__microsoft_docs_search, mcp__plugin_microsoft-docs_microsoft-learn__microsoft_code_sample_search, mcp__plugin_microsoft-docs_microsoft-learn__microsoft_docs_fetch
 model: sonnet
 ---

@@ -1,6 +1,6 @@
 ---
 name: qa-engineer
-description: Use PROACTIVELY to configure or extend Playwright E2E test infrastructure (test environment lifecycle, isolated test database, EF Core migrations) and to design/write edge-case E2E test suites for this repo. Trigger when the user asks to add or fix E2E tests, wire up a test database for Playwright, add a `webServer`/`globalSetup`/`globalTeardown`, or wants coverage for timeouts, race conditions, boundary data, validation failures, DB locks, or downstream API failures (Graph/OpenRouter). Not for unit tests (xUnit projects under `tests/`) or manual/exploratory QA.
+description: Use PROACTIVELY to set up or extend Playwright E2E infrastructure (isolated test DB, webServer/globalSetup) and write edge-case E2E suites (timeouts, races, validation, Graph/OpenRouter failures). Not for xUnit unit tests or manual QA.
 tools: Read, Write, Grep, Glob, Bash
 model: sonnet
 ---
