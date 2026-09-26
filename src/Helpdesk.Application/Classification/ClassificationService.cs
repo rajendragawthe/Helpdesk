@@ -1,4 +1,3 @@
-using Helpdesk.Core.Entities;
 using Helpdesk.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 

@@ -49,6 +49,10 @@ public class EmailIngestionService(
                     await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
                 logger.LogError(

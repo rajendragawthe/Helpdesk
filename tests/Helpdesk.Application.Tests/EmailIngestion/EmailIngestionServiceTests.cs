@@ -279,6 +279,25 @@ public class EmailIngestionServiceTests
         await service.IngestNewEmailsAsync();
 
         Assert.Equal(2, ticketRepository.Tickets.Count);
+        Assert.Equal(2, classifier.ClassifiedTicketIds.Count);
         Assert.Equal(["msg-1", "msg-2"], mailClient.MarkedAsProcessed);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_CancellationRequested_PropagatesAndStopsBatch()
+    {
+        var mailClient = new FakeMailClient(Email("msg-1", "conv-1"), Email("msg-2", "conv-2"));
+        var ticketRepository = new FakeTicketRepository();
+        var classifier = new FakeClassificationService { ExceptionToThrow = new OperationCanceledException() };
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.IngestNewEmailsAsync(cts.Token));
+
+        Assert.Single(classifier.ClassifiedTicketIds);
+        Assert.Single(ticketRepository.Tickets);
+        Assert.Equal(["msg-1"], mailClient.MarkedAsProcessed);
     }
 }

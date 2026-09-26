@@ -28,6 +28,21 @@ public class HtmlTextTests
         Assert.Equal("one two", result);
     }
 
+    [Theory]
+    [InlineData("<script>")]
+    [InlineData("<")]
+    public void ToPlainText_HostileRepeatedInput_CompletesQuicklyWithoutThrowing(string unit)
+    {
+        var input = string.Concat(Enumerable.Repeat(unit, 50_000));
+
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        var exception = Record.Exception(() => HtmlText.ToPlainText(input));
+        stopwatch.Stop();
+
+        Assert.Null(exception);
+        Assert.True(stopwatch.ElapsedMilliseconds < 5000, $"Took {stopwatch.ElapsedMilliseconds} ms");
+    }
+
     [Fact]
     public void ToPlainText_TruncatesToMaxLength()
     {

@@ -9,12 +9,13 @@ public class FakeClassificationService : IClassificationService
 
     public Task ClassifyTicketAsync(Guid ticketId, CancellationToken cancellationToken = default)
     {
+        ClassifiedTicketIds.Add(ticketId);
+
         if (ExceptionToThrow is not null)
         {
             throw ExceptionToThrow;
         }
 
-        ClassifiedTicketIds.Add(ticketId);
         return Task.CompletedTask;
     }
 }

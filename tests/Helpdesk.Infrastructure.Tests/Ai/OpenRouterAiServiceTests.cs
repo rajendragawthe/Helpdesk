@@ -74,6 +74,39 @@ public class OpenRouterAiServiceTests
     }
 
     [Fact]
+    public async Task ClassifyAsync_RequestCapsMaxTokensAndTreatsSystemPromptContentAsUntrusted()
+    {
+        var (service, handler) = Create(HttpStatusCode.OK,
+            CompletionWith("""{"category":"Other","summary":"s","confidence":0.5}"""));
+
+        await service.ClassifyAsync("s", "b");
+
+        using var doc = JsonDocument.Parse(handler.RequestBody!);
+        Assert.Equal(300, doc.RootElement.GetProperty("max_tokens").GetInt32());
+        var messages = doc.RootElement.GetProperty("messages");
+        Assert.Contains("untrusted", messages[0].GetProperty("content").GetString());
+        Assert.Contains("<email_body>", messages[1].GetProperty("content").GetString());
+    }
+
+    [Fact]
+    public async Task ClassifyAsync_OverlongSummary_IsTruncatedTo1000Characters()
+    {
+        var longSummary = new string('x', 5000);
+        var (service, _) = Create(HttpStatusCode.OK,
+            CompletionWith($$"""{"category":"Other","summary":"{{longSummary}}","confidence":0.5}"""));
+
+        var result = await service.ClassifyAsync("s", "b");
+
+        Assert.Equal(1000, result.Summary.Length);
+    }
+
+    [Fact]
+    public void OpenRouterOptions_ToString_DoesNotLeakApiKey()
+    {
+        Assert.DoesNotContain("sk-test-key", Options.ToString());
+    }
+
+    [Fact]
     public async Task ClassifyAsync_UnknownCategory_NormalizedToOther()
     {
         var (service, _) = Create(HttpStatusCode.OK,

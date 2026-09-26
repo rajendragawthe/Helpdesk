@@ -34,7 +34,7 @@ Create the database once and apply migrations:
 
 ```
 createdb -h localhost -p 5432 -U helpdesk helpdesk_test
-dotnet ef database update \
+OpenRouter__Enabled=false GraphApi__Enabled=false dotnet ef database update \
   --project ../src/Helpdesk.Infrastructure \
   --startup-project ../src/Helpdesk.Api \
   --connection "Host=localhost;Port=5432;Database=helpdesk_test;Username=helpdesk;Password=helpdesk"
