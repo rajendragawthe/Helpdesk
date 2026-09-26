@@ -16,7 +16,7 @@ test.describe('Agent role — cannot reach admin-only UI', () => {
     })
   })
 
-  test('NavBar does not show "Manage Agents" for an Agent', async ({ page }) => {
+  test('nav rail does not show "Manage Agents" for an Agent', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL('/home')
     await expect(page.getByRole('link', { name: 'Manage Agents' })).toHaveCount(0)
@@ -45,7 +45,7 @@ test.describe('Admin role — can reach admin-only UI', () => {
     })
   })
 
-  test('NavBar shows "Manage Agents" for an Admin', async ({ page }) => {
+  test('nav rail shows "Manage Agents" for an Admin', async ({ page }) => {
     await page.goto('/')
     await expect(page).toHaveURL('/home')
     await expect(page.getByRole('link', { name: 'Manage Agents' })).toBeVisible()

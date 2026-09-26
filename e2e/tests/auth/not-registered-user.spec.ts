@@ -3,7 +3,7 @@ import { mockAuthMe, seedFakeMsalSession } from './msal-mock'
 
 // Drives the "authenticated in Entra ID but no matching Users row" flow end to end at the
 // frontend: AuthController.Me() returns 403 with a specific message in this case (see
-// src/Helpdesk.Api/Controllers/AuthController.cs), and useCurrentUser/HomePage must surface it
+// src/Helpdesk.Api/Controllers/AuthController.cs), and useCurrentUser/AccessNotice must surface it
 // as a clear message, not hang on a blank/loading page. The real backend claims-transformation
 // logic that produces this 403 (HelpdeskUserClaimsTransformation) cannot be driven from here
 // without a real Entra-issued token — see the note in README/report about that gap; this test
@@ -22,8 +22,8 @@ test('shows the "not registered" message instead of a blank or crashed page', as
   await expect(page.getByText('Access not set up')).toBeVisible()
   await expect(page.getByText(NOT_REGISTERED_MESSAGE)).toBeVisible()
 
-  // The "welcome" happy-path content must not also render alongside the not-registered alert.
-  await expect(page.getByText(/Your ticket queue will show up here/)).not.toBeVisible()
+  // The app shell must not mount for an unregistered user: no nav rail alongside the alert.
+  await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(0)
 })
 
 test('a not-registered user gets no admin affordance even if somehow on /admin/users', async ({
@@ -33,9 +33,9 @@ test('a not-registered user gets no admin affordance even if somehow on /admin/u
   await mockAuthMe(page, { status: 403, body: { message: NOT_REGISTERED_MESSAGE } })
 
   await page.goto('/admin/users')
-  // App.tsx only allows /admin/users through when `user?.roles.includes('Admin')` — a
-  // not-registered caller has no `user` at all, so it must bounce to /home, not render the
-  // admin page or hang on it.
-  await expect(page).toHaveURL('/home')
+  // RequireAuth renders a standalone AccessNotice on the requested path (no redirect) when
+  // there is no `user`, so the admin page and the app shell never mount.
+  await expect(page).toHaveURL('/admin/users')
   await expect(page.getByText('Access not set up')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
 })

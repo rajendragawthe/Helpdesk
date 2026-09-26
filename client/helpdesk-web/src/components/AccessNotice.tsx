@@ -11,7 +11,7 @@ function AccessNotice({ error, notRegistered }: AccessNoticeProps) {
   const { instance } = useMsal()
 
   return (
-    <section className="flex grow flex-col items-center justify-center gap-4 px-8 py-16 text-center">
+    <main className="flex grow flex-col items-center justify-center gap-4 px-8 py-16 text-center">
       <Alert variant="destructive" className="max-w-[560px] text-left">
         <AlertTitle>{notRegistered ? 'Access not set up' : 'Something went wrong'}</AlertTitle>
         <AlertDescription>{error ?? 'Your account could not be loaded.'}</AlertDescription>
@@ -19,7 +19,7 @@ function AccessNotice({ error, notRegistered }: AccessNoticeProps) {
       <Button type="button" variant="outline" onClick={() => instance.logoutRedirect()}>
         Sign out
       </Button>
-    </section>
+    </main>
   )
 }
 
