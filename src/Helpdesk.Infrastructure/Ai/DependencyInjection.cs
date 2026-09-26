@@ -1,4 +1,5 @@
 using Helpdesk.Core.Interfaces;
+using Helpdesk.Infrastructure.Ai.Kb;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -46,6 +47,13 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        return services;
+    }
+
+    /// <summary>The KB is a static embedded file with no external dependency, so it is always registered.</summary>
+    public static IServiceCollection AddKnowledgeBase(this IServiceCollection services)
+    {
+        services.AddSingleton<IKnowledgeBase, JsonKnowledgeBase>();
         return services;
     }
 }

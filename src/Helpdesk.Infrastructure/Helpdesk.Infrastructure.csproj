@@ -19,6 +19,10 @@
     <InternalsVisibleTo Include="Helpdesk.Infrastructure.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Ai\Kb\kb.json" LogicalName="Helpdesk.Infrastructure.Ai.Kb.kb.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

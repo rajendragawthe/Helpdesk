@@ -27,6 +27,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddGraphApi(builder.Configuration);
 builder.Services.AddOpenRouter(builder.Configuration);
+builder.Services.AddKnowledgeBase();
 builder.Services.AddApplication(builder.Configuration);
 
 builder.Services

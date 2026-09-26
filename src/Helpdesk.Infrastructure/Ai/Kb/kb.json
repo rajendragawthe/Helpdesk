@@ -1,0 +1,72 @@
+[
+  {
+    "id": "billing-duplicate-charge",
+    "title": "Duplicate charge",
+    "category": "Billing",
+    "keywords": ["charged twice", "double charge", "double charged", "duplicate charge", "billed twice", "charged two times"],
+    "content": "If a customer was charged twice for the same order or subscription period, the duplicate charge is refunded in full once verified. Ask for the last four digits of the card and the date and amount of both charges. Refunds go back to the original payment method and typically appear within 5-10 business days."
+  },
+  {
+    "id": "billing-refund",
+    "title": "Refund requests",
+    "category": "Billing",
+    "keywords": ["refund", "money back", "reimburse", "reimbursement"],
+    "content": "Refund requests are reviewed by the billing team. Customers can request a refund within 30 days of purchase. To process a request we need the order or invoice number and the reason. Approved refunds go to the original payment method within 5-10 business days."
+  },
+  {
+    "id": "billing-invoice",
+    "title": "Invoices and receipts",
+    "category": "Billing",
+    "keywords": ["invoice", "receipt", "vat", "tax invoice", "billing statement"],
+    "content": "Invoices and receipts are emailed after every payment and can be downloaded from Account > Billing > Invoices. To change the company name, address or VAT number on an invoice, the customer can reply with the new details and an agent will reissue it."
+  },
+  {
+    "id": "billing-payment-method",
+    "title": "Payment method and failed payments",
+    "category": "Billing",
+    "keywords": ["update card", "payment method", "credit card", "card expired", "card declined", "payment failed"],
+    "content": "Customers can update their payment method under Account > Billing > Payment methods. A failed payment is retried automatically after 3 days; updating the card triggers an immediate retry."
+  },
+  {
+    "id": "access-password-reset",
+    "title": "Password reset",
+    "category": "Account Access",
+    "keywords": ["password", "reset password", "forgot password", "forgot my password", "can't log in", "cannot log in", "cant log in"],
+    "content": "Customers can use 'Forgot password' on the sign-in page to receive a reset link by email. The link is valid for 60 minutes. If it does not arrive within a few minutes, check the spam folder. Support staff never ask for a password."
+  },
+  {
+    "id": "access-locked-account",
+    "title": "Locked or suspended account",
+    "category": "Account Access",
+    "keywords": ["locked", "account locked", "locked out", "too many attempts", "suspended"],
+    "content": "An account is locked for 30 minutes after 5 failed sign-in attempts; waiting and then using 'Forgot password' restores access. A suspended account needs an agent to review it, so ask the customer for the email address on the account."
+  },
+  {
+    "id": "access-change-email",
+    "title": "Changing the account email",
+    "category": "Account Access",
+    "keywords": ["change email", "change my email", "update email", "new email address", "email address change"],
+    "content": "Customers can change the account email under Account > Profile; a confirmation link is sent to the new address. If they can no longer access the old address, an agent must verify their identity before the email is changed."
+  },
+  {
+    "id": "tech-troubleshooting",
+    "title": "General troubleshooting",
+    "category": "Technical Issue",
+    "keywords": ["not working", "doesn't work", "does not work", "won't load", "crash", "crashes", "error", "bug", "slow", "broken"],
+    "content": "For general problems ask the customer to refresh the page or restart the app, try a private browser window or clear the cache, and confirm they are on the latest version. To investigate further we need the exact error message, what they were doing, their browser or device and operating system, and a screenshot if possible."
+  },
+  {
+    "id": "feature-request",
+    "title": "Feature requests",
+    "category": "Feature Request",
+    "keywords": ["feature request", "feature", "suggestion", "please add", "would be great", "it would be nice"],
+    "content": "Feature requests are logged and reviewed by the product team, but no delivery dates can be promised. Thank the customer, restate the request in your own words, and ask how it would help their workflow."
+  },
+  {
+    "id": "general-support-hours",
+    "title": "Support hours and contact",
+    "category": "General Inquiry",
+    "keywords": ["support hours", "opening hours", "business hours", "working hours", "phone number", "when are you open", "contact"],
+    "content": "Support is available by email around the clock. Agents reply Monday to Friday, 9:00-17:00 UTC, usually within one business day."
+  }
+]
