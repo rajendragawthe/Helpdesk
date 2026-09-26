@@ -1,9 +1,9 @@
 # Customer Email HTML View (sandboxed iframe) — Design
 
 Date: 2026-09-27
-Status: Approved in brainstorming (chat); awaiting written-spec review
+Status: Approved; implemented
 Origin: manual full-loop test of Phase 7 (2026-09-27): the ticket page shows the customer's email as plain text and the user wants it formatted.
-Plan: `docs/superpowers/plans/2026-09-27-email-html-view.md` (to be written)
+Plan: `docs/superpowers/plans/2026-09-27-email-html-view.md` (implemented)
 Sub-project 1 of 2. Sub-project 2 (app-shell redesign) gets its own spec and plan afterwards.
 
 ## Goal
@@ -48,7 +48,8 @@ No migration, no new endpoint, no new npm dependency. `bodyText` is unchanged an
 ### API
 - `GET /api/tickets/{id}` (and every response that returns `TicketDetail`) includes `bodyHtml` per message.
   Customer message: the stored `Message.Body` verbatim if it is not blank and `Length <= 500_000`, else
-  `null`. Agent message: `null` (agent text is not HTML).
+  `null`. Plain-text (non-HTML) customer emails also get `bodyHtml = null` (no recognisable HTML tag), so the
+  plain-text view keeps their line breaks. Agent message: `null` (agent text is not HTML).
 - The list endpoint is unchanged (it carries no message bodies).
 - Because the value is HTML, JSON serialization is unchanged (it is just a string); nothing on the server
   interprets or rewrites it.
@@ -102,8 +103,8 @@ Returns a complete HTML document string for `srcDoc`:
 - Application (xunit, hand-written fakes): `TicketMapper` / workflow tests: customer message returns the raw
   HTML; agent message returns `null`; blank body returns `null`; a body at the cap is returned and one
   character over is `null`; `bodyText` is unchanged for all.
-- `Helpdesk.Api.Tests`: the controller returns a detail whose messages carry `bodyHtml` (mapping through JSON
-  is a plain string).
+- `Helpdesk.Api.Tests`: a controller-level `bodyHtml` check was planned but is covered by the Application-level
+  tests above instead (mapping through JSON is a plain string).
 - Frontend: `npm run lint` and `npm run build`. There is no component test framework in this repo, so
   `buildEmailDocument` stays a pure function for later unit tests and the viewer is checked manually.
 - Manual (user's hands: secrets, a real formatted email): send an HTML email with bold, a list, a link, an

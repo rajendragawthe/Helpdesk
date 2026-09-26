@@ -582,6 +582,21 @@ public class TicketWorkflowServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_LessThanSignFollowedBySpace_IsNotHtml_ButRealTagIs()
+    {
+        var ticket = AddTicket(messages:
+        [
+            Customer("if the price < a certain amount", DateTimeOffset.UtcNow.AddMinutes(-5)),
+            Customer("<p>hi</p>", DateTimeOffset.UtcNow.AddMinutes(-4)),
+        ]);
+
+        var messages = (await Create().GetAsync(ticket.Id)).Value!.Messages.ToList();
+
+        Assert.Null(messages[0].BodyHtml);
+        Assert.Equal("<p>hi</p>", messages[1].BodyHtml);
+    }
+
+    [Fact]
     public async Task GetAsync_PlainTextCustomerEmail_HasNoBodyHtml_SoTheTextViewKeepsItsLineBreaks()
     {
         var ticket = AddTicket(messages: [Customer("Hi team,\n\nplease refund me 5 < 10.\nThanks",DateTimeOffset.UtcNow.AddMinutes(-5))]);

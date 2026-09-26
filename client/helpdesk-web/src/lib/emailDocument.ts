@@ -9,7 +9,7 @@ const BASE_STYLE = [
 ].join('')
 
 // Elements that can load, run or navigate: dropped before the HTML is re-serialized.
-const ACTIVE_ELEMENTS = 'script, noscript, iframe, frame, frameset, object, embed, applet, form, link, meta, base, template'
+const ACTIVE_ELEMENTS = 'script, noscript, iframe, frame, frameset, object, embed, applet, form, link, meta, base, template, animate, set, animateMotion, animateTransform'
 
 export function buildEmailDocument(html: string): string {
   // DOMParser documents are inert: nothing in `html` runs or loads while it is parsed here.
@@ -24,15 +24,21 @@ export function buildEmailDocument(html: string): string {
   parsed.querySelectorAll(`${ACTIVE_ELEMENTS}, style`).forEach((element) => element.remove())
 
   // Drop link targets that would run or embed content when clicked.
-  parsed.querySelectorAll('a[href], area[href]').forEach((element) => {
-    // eslint-disable-next-line no-control-regex
-    const href = (element.getAttribute('href') ?? '').replace(/[\u0000-\u0020\u007f]/g, '').toLowerCase()
-    if (/^(javascript|data|vbscript):/.test(href)) element.removeAttribute('href')
+  // Covers href and xlink:href on every element (HTML <a>/<area>, SVG <a>/<use>, ...).
+  parsed.querySelectorAll('*').forEach((element) => {
+    for (const attr of Array.from(element.attributes)) {
+      const name = attr.name.toLowerCase()
+      if (name !== 'href' && !name.endsWith(':href')) continue
+      // eslint-disable-next-line no-control-regex
+      const value = attr.value.replace(/[\u0000-\u0020\u007f]/g, '').toLowerCase()
+      if (/^(javascript|data|vbscript):/.test(value)) element.removeAttributeNode(attr)
+    }
   })
 
-  // The email's own CSS is kept, but every `<` is replaced by a CSS escape so that no markup can ever be
-  // re-formed from the CSS text when it is serialized into our <style> block.
-  const emailCss = styles.join('\n').replace(/</g, '\\3c ')
+  // The email's own CSS is kept. Outlook-style `<!-- ... -->` wrappers are removed first (they would otherwise
+  // break the first rule once `<` is escaped); then every remaining `<` is replaced by a CSS escape so that no
+  // markup can ever be re-formed from the CSS text when it is serialized into our <style> block.
+  const emailCss = styles.join('\n').replace(/<!--|-->/g, '').replace(/</g, '\\3c ')
 
   return [
     '<!doctype html><html><head><meta charset="utf-8">',

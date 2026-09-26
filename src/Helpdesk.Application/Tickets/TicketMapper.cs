@@ -65,11 +65,20 @@ internal static partial class TicketMapper
         return LooksLikeHtml(message.Body) ? message.Body : null;
     }
 
-    private static bool LooksLikeHtml(string body) =>
-        HtmlTagRegex().IsMatch(body);
+    private static bool LooksLikeHtml(string body)
+    {
+        try
+        {
+            return HtmlTagRegex().IsMatch(body);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            return false;
+        }
+    }
 
     [GeneratedRegex(
-        @"<\s*(html|head|body|div|p|br|table|span|a|b|i|u|strong|em|ul|ol|li|h[1-6]|img|style|font|center|blockquote)\b",
+        @"<(html|head|body|div|p|br|table|span|a|b|i|u|strong|em|ul|ol|li|h[1-6]|img|style|font|center|blockquote)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
         matchTimeoutMilliseconds: 1000)]
     private static partial Regex HtmlTagRegex();

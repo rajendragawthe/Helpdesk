@@ -17,11 +17,20 @@ function EmailHtmlViewer({ html }: EmailHtmlViewerProps) {
   const srcDoc = useMemo(() => buildEmailDocument(html), [html])
 
   const measure = useCallback(() => {
-    const body = frameRef.current?.contentDocument?.body
-    if (!body) return
-    const measured = Math.ceil(body.getBoundingClientRect().height) + 2
+    const frame = frameRef.current
+    const root = frame?.contentDocument?.documentElement
+    if (!frame || !root) return
+    // Collapse the frame first so the viewport is 0px tall: an email with html,body{height:100%} would otherwise
+    // report the (old) viewport height as its content height and the frame could never shrink.
+    const previous = frame.style.height
+    frame.style.height = '0px'
+    const measured = Math.ceil(root.scrollHeight) + 2
     if (measured > 2) {
-      setHeight(Math.min(measured, MAX_HEIGHT))
+      const next = Math.min(measured, MAX_HEIGHT)
+      frame.style.height = `${next}px`
+      setHeight(next)
+    } else {
+      frame.style.height = previous
     }
   }, [])
 
