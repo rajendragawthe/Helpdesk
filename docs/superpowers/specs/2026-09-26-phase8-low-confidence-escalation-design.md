@@ -1,10 +1,9 @@
 # Phase 8 — Low-Confidence Escalation (Review Flags) — Design
 
 Date: 2026-09-26
-Status: Approved in brainstorming (chat); awaiting written-spec review
+Status: Approved (design in brainstorming; written spec reviewed)
 Covers: `implementation-plan.md` Phase 8, tasks 46-48 (46-47 here; 48, the queue badge, is a frontend follow-up after Phase 7 merges)
-Plan: `docs/superpowers/plans/2026-09-26-phase8-low-confidence-escalation.md` (to be written)
-Runs in parallel with Phase 7 (agent queue + reply UI); see "Contract with Phase 7".
+Plan: `docs/superpowers/plans/2026-09-26-phase8-low-confidence-escalation.md`Runs in parallel with Phase 7 (agent queue + reply UI); see "Contract with Phase 7".
 
 ## Goal
 

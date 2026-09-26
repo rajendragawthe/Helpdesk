@@ -25,6 +25,7 @@ public class TicketModelTests
 
         Assert.Equal(typeof(ReviewReasons), property.ClrType);
         Assert.False(property.IsNullable);
+        Assert.NotNull(property.GetDefaultValue());
         Assert.Equal(0, Convert.ToInt32(property.GetDefaultValue()));
     }
 }
