@@ -15,11 +15,24 @@ export function buildEmailDocument(html: string): string {
   // DOMParser documents are inert: nothing in `html` runs or loads while it is parsed here.
   const parsed = new DOMParser().parseFromString(html, 'text/html')
 
-  const styles = Array.from(parsed.querySelectorAll('style')).map((style) => style.textContent ?? '')
+  // Only HTML-namespace <style> elements are kept. SVG/MathML <style> content is parsed differently (entities and
+  // CDATA are decoded), so its text can contain markup-looking sequences; those elements are dropped entirely.
+  const HTML_NS = 'http://www.w3.org/1999/xhtml'
+  const styles = Array.from(parsed.querySelectorAll('style'))
+    .filter((style) => style.namespaceURI === HTML_NS)
+    .map((style) => style.textContent ?? '')
   parsed.querySelectorAll(`${ACTIVE_ELEMENTS}, style`).forEach((element) => element.remove())
 
-  // The email's own CSS is kept; a closing-tag sequence can never appear in it, but strip it defensively.
-  const emailCss = styles.join('\n').replace(/<\/style/gi, '')
+  // Drop link targets that would run or embed content when clicked.
+  parsed.querySelectorAll('a[href], area[href]').forEach((element) => {
+    // eslint-disable-next-line no-control-regex
+    const href = (element.getAttribute('href') ?? '').replace(/[\u0000-\u0020\u007f]/g, '').toLowerCase()
+    if (/^(javascript|data|vbscript):/.test(href)) element.removeAttribute('href')
+  })
+
+  // The email's own CSS is kept, but every `<` is replaced by a CSS escape so that no markup can ever be
+  // re-formed from the CSS text when it is serialized into our <style> block.
+  const emailCss = styles.join('\n').replace(/</g, '\\3c ')
 
   return [
     '<!doctype html><html><head><meta charset="utf-8">',

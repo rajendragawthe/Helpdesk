@@ -13,7 +13,8 @@ type View = 'formatted' | 'text'
 function MessageBody({ message }: MessageBodyProps) {
   const [view, setView] = useState<View>('formatted')
 
-  if (!message.bodyHtml) {
+  const html = message.bodyHtml
+  if (!html?.trim()) {
     return <p className="whitespace-pre-wrap text-sm">{message.bodyText}</p>
   }
 
@@ -23,6 +24,7 @@ function MessageBody({ message }: MessageBodyProps) {
         <Button
           type="button"
           size="sm"
+          aria-pressed={view === 'formatted'}
           variant={view === 'formatted' ? 'secondary' : 'ghost'}
           onClick={() => setView('formatted')}
         >
@@ -31,6 +33,7 @@ function MessageBody({ message }: MessageBodyProps) {
         <Button
           type="button"
           size="sm"
+          aria-pressed={view === 'text'}
           variant={view === 'text' ? 'secondary' : 'ghost'}
           onClick={() => setView('text')}
         >
@@ -38,7 +41,7 @@ function MessageBody({ message }: MessageBodyProps) {
         </Button>
       </div>
       {view === 'formatted' ? (
-        <EmailHtmlViewer html={message.bodyHtml} />
+        <EmailHtmlViewer html={html} />
       ) : (
         <p className="whitespace-pre-wrap text-sm">{message.bodyText}</p>
       )}
