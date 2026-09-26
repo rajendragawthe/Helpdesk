@@ -49,11 +49,11 @@
 34. Hook classification into the ingestion pipeline (runs right after ticket creation) — done (`EmailIngestionService` classifies newly created tickets only; failures are logged and never fail ingestion)
 35. Manual test: verify a new ticket gets a category and summary populated automatically � done, verified 2026-09-26 against the shared mailbox with a real OpenRouter key. First run with the default paid model `openai/gpt-4o-mini` got HTTP 402 Payment Required for every ticket (account had no credits): tickets and messages were still created, one error was logged per ticket, and ingestion continued, so the failure path behaved as designed. Second run used the free model `nvidia/nemotron-3-super-120b-a12b:free` via the environment override `OpenRouter__Model` (no repo config change): a "Charged twice" test email was stored as a `Classification` with Category `Billing`, Confidence 0.95 and a one-sentence summary. One earlier ticket failed classification because OpenRouter returned HTTP 200 with a 503 "provider_overloaded" error body and no choices; `OpenRouterAiService` now surfaces the provider error and retries transient failures (see CLAUDE.md). Not verified live: a reply on the same email thread not creating a second classification (covered only by unit tests). Caution: the poller ingests up to 50 unread messages per poll and marks them read, so pointing a dev environment at a mailbox with a backlog floods the dev DB with tickets (and, with a funded key, many LLM calls) � clear or redirect the mailbox first.
 
-## Phase 6 — AI Draft Reply (Hardcoded KB)
-36. Create hardcoded KB as static content (JSON/config file or in-code constants) in `Helpdesk.Infrastructure/Ai`
-37. Implement `DraftReplyAsync`: prompt includes ticket content + relevant hardcoded KB snippets, returns draft text
-38. Store draft on the ticket/message record; set ticket status to `InReview`
-39. Manual test: confirm a plausible draft reply is generated and stored for a new ticket
+## Phase 6 — AI Draft Reply (Hardcoded KB) — done (manual test pending)
+36. Create hardcoded KB as static content — done (`Helpdesk.Infrastructure/Ai/Kb/kb.json`, embedded; `IKnowledgeBase`/`JsonKnowledgeBase`; `KbMatcher` keyword + category-boost selection in `Helpdesk.Application/DraftReply`)
+37. Implement `DraftReplyAsync` — done (`IAiService.DraftReplyAsync`, `OpenRouterAiService`; prompt includes ticket content + matched KB articles, returns draft text)
+38. Store draft on the ticket; set ticket status to `InReview` — done (`DraftReplyService` sets `Ticket.DraftReply` + `InReview`; called by `EmailIngestionService` after classification for new tickets)
+39. Manual test: confirm a plausible draft reply is generated and stored for a new ticket — pending (needs the user's OpenRouter/Graph secrets and a real test email; see CLAUDE.md "AI draft reply")
 
 ## Phase 7 — Agent Queue & Reply UI
 40. `TicketsController`: `GET /api/tickets` (queue, filtered to agent's assigned/unassigned tickets), `GET /api/tickets/{id}` (detail incl. thread + draft)

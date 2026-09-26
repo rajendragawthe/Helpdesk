@@ -1,4 +1,5 @@
 using Helpdesk.Application.Classification;
+using Helpdesk.Application.DraftReply;
 using Helpdesk.Core.Entities;
 using Helpdesk.Core.Enums;
 using Helpdesk.Core.Interfaces;
@@ -40,13 +41,21 @@ public class EmailIngestionService(
 
                 var newTicketId = await ProcessEmailAsync(email, ticketRepository, messageRepository);
 
-                // Only a brand-new ticket is classified (never a reply appended to an existing
-                // conversation). IClassificationService is optional: it is only registered when
-                // OpenRouter is configured, so ingestion keeps working without AI.
-                if (newTicketId is { } ticketId
-                    && scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
+                // Only a brand-new ticket is classified and drafted (never a reply appended to an
+                // existing conversation). Both services are optional: they are only registered when
+                // OpenRouter is configured, so ingestion keeps working without AI. Drafting runs after
+                // classification so the drafter can use the stored category.
+                if (newTicketId is { } ticketId)
                 {
-                    await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
+                    if (scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
+                    {
+                        await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
+                    }
+
+                    if (scope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
+                    {
+                        await drafter.DraftReplyAsync(ticketId, cancellationToken);
+                    }
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

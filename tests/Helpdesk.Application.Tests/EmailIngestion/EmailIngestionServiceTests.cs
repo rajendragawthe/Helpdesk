@@ -300,4 +300,93 @@ public class EmailIngestionServiceTests
         Assert.Single(ticketRepository.Tickets);
         Assert.Equal(["msg-1"], mailClient.MarkedAsProcessed);
     }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NewConversation_DraftsReplyForNewTicketAfterClassification()
+    {
+        var ticketRepository = new FakeTicketRepository();
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService(classifier);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier, drafter);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-1", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        var ticket = Assert.Single(ticketRepository.Tickets);
+        Assert.Equal(ticket.Id, Assert.Single(drafter.DraftedTicketIds));
+        Assert.Equal(1, drafter.ClassifiedCountAtDraftTime);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ReplyToExistingConversation_DoesNotDraftAgain()
+    {
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Help please",
+            RequesterEmail = "requester@example.com",
+            ConversationId = "conv-1",
+        });
+        var drafter = new FakeDraftReplyService();
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), new FakeClassificationService(), drafter);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Empty(drafter.DraftedTicketIds);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NoDraftServiceRegistered_StillClassifiesAndCreatesTicket()
+    {
+        var ticketRepository = new FakeTicketRepository();
+        var classifier = new FakeClassificationService();
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-1", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Single(ticketRepository.Tickets);
+        Assert.Single(classifier.ClassifiedTicketIds);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_DraftingThrows_MessageStillMarkedProcessedAndOthersContinue()
+    {
+        var mailClient = new FakeMailClient(Email("msg-1", "conv-1"), Email("msg-2", "conv-2"));
+        var ticketRepository = new FakeTicketRepository();
+        var drafter = new FakeDraftReplyService { ExceptionToThrow = new InvalidOperationException("boom") };
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), new FakeClassificationService(), drafter);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(2, ticketRepository.Tickets.Count);
+        Assert.Equal(2, drafter.DraftedTicketIds.Count);
+        Assert.Equal(["msg-1", "msg-2"], mailClient.MarkedAsProcessed);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_DraftingCancelled_PropagatesAndStopsBatch()
+    {
+        var mailClient = new FakeMailClient(Email("msg-1", "conv-1"), Email("msg-2", "conv-2"));
+        var ticketRepository = new FakeTicketRepository();
+        var drafter = new FakeDraftReplyService { ExceptionToThrow = new OperationCanceledException() };
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), new FakeClassificationService(), drafter);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => service.IngestNewEmailsAsync(cts.Token));
+
+        Assert.Single(drafter.DraftedTicketIds);
+        Assert.Equal(["msg-1"], mailClient.MarkedAsProcessed);
+    }
 }
