@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useMsal } from '@azure/msal-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -26,32 +26,42 @@ function statusVariant(status: TicketStatus): 'default' | 'secondary' | 'outline
   return 'outline'
 }
 
+function formatAge(value: string): string {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : formatDistanceToNow(date, { addSuffix: true })
+}
+
 function QueuePage({ isAdmin }: QueuePageProps) {
   const { instance } = useMsal()
   const [filter, setFilter] = useState<TicketFilter>('queue')
   const [tickets, setTickets] = useState<TicketListItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(
-    async (which: TicketFilter) => {
-      setError(null)
-      setTickets(null)
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
       try {
-        const response = await apiFetch(instance, `/api/tickets?filter=${which}`)
+        const response = await apiFetch(instance, `/api/tickets?filter=${filter}`)
         if (!response.ok) {
           throw new Error(await errorMessage(response))
         }
-        setTickets((await response.json()) as TicketListItem[])
+        const data = (await response.json()) as TicketListItem[]
+        if (!cancelled) setTickets(data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error')
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Unknown error')
       }
-    },
-    [instance],
-  )
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [filter, instance])
 
-  useEffect(() => {
-    load(filter)
-  }, [filter, load])
+  const changeFilter = (next: TicketFilter) => {
+    setError(null)
+    setTickets(null)
+    setFilter(next)
+  }
 
   const filters: TicketFilter[] = isAdmin ? ['queue', 'mine', 'all'] : ['queue', 'mine']
 
@@ -60,7 +70,7 @@ function QueuePage({ isAdmin }: QueuePageProps) {
       <Card>
         <CardHeader>
           <CardTitle>Tickets</CardTitle>
-          <Tabs value={filter} onValueChange={(value) => setFilter(value as TicketFilter)}>
+          <Tabs value={filter} onValueChange={(value) => changeFilter(value as TicketFilter)}>
             <TabsList>
               {filters.map((f) => (
                 <TabsTrigger key={f} value={f}>
@@ -76,7 +86,7 @@ function QueuePage({ isAdmin }: QueuePageProps) {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          {!error && tickets === null && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {!error && tickets === null && <p role="status" className="text-sm text-muted-foreground">Loading…</p>}
           {!error && tickets !== null && tickets.length === 0 && (
             <p className="text-sm text-muted-foreground">No tickets here.</p>
           )}
@@ -108,9 +118,9 @@ function QueuePage({ isAdmin }: QueuePageProps) {
                     <TableCell>
                       {ticket.category ? <Badge variant="outline">{ticket.category}</Badge> : '—'}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">{ticket.summary ?? '—'}</TableCell>
+                    <TableCell className="max-w-xs truncate" title={ticket.summary ?? undefined}>{ticket.summary ?? '—'}</TableCell>
                     <TableCell>{ticket.assignee?.displayName ?? 'Unassigned'}</TableCell>
-                    <TableCell>{formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true })}</TableCell>
+                    <TableCell>{formatAge(ticket.createdAt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
