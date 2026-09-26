@@ -1,3 +1,4 @@
+using Helpdesk.Core.Enums;
 using Helpdesk.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -13,6 +14,7 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.RequesterEmail).IsRequired().HasMaxLength(400);
         builder.Property(t => t.ConversationId).HasMaxLength(200);
         builder.HasIndex(t => t.ConversationId);
+        builder.Property(t => t.ReviewReasons).HasDefaultValue(ReviewReasons.None);
 
         builder.HasOne(t => t.AssignedUser)
             .WithMany()

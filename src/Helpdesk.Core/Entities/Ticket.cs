@@ -8,6 +8,7 @@ public class Ticket
     public required string Subject { get; set; }
     public required string RequesterEmail { get; set; }
     public TicketStatus Status { get; set; } = TicketStatus.New;
+    public ReviewReasons ReviewReasons { get; set; } = ReviewReasons.None;
     public string? ConversationId { get; set; }
     public string? DraftReply { get; set; }
     public Guid? AssignedUserId { get; set; }
