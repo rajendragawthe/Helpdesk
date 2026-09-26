@@ -1,12 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { useIsAuthenticated, useMsal } from '@azure/msal-react'
 import { InteractionStatus } from '@azure/msal-browser'
-import NavBar from './components/NavBar'
 import LandingPage from './pages/LandingPage'
-import HomePage from './pages/HomePage'
+import DashboardPage from './pages/DashboardPage'
 import AdminUsersPage from './pages/AdminUsersPage'
-import QueuePage from './pages/QueuePage'
-import TicketDetailPage from './pages/TicketDetail'
+import TicketDetail from './pages/TicketDetail'
+import AppShell from './layouts/AppShell'
+import TicketsLayout from './layouts/TicketsLayout'
+import { RequireAdmin, RequireAuth } from './layouts/guards'
 import { useCurrentUser } from './hooks/useCurrentUser'
 
 function App() {
@@ -34,63 +35,28 @@ function App() {
         element={isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />}
       />
       <Route
-        path="/home"
         element={
-          isAuthenticated ? (
-            <>
-              <NavBar isAdmin={isAdmin} />
-              <HomePage user={user} error={error} notRegistered={notRegistered} />
-            </>
-          ) : (
-            <Navigate to="/" replace />
-          )
+          <RequireAuth
+            isAuthenticated={isAuthenticated}
+            loading={loading}
+            user={user}
+            error={error}
+            notRegistered={notRegistered}
+          />
         }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          !isAuthenticated ? (
-            <Navigate to="/" replace />
-          ) : loading ? null : isAdmin ? (
-            <>
-              <NavBar isAdmin={isAdmin} />
-              <AdminUsersPage />
-            </>
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
-      />
-      <Route
-        path="/tickets"
-        element={
-          !isAuthenticated ? (
-            <Navigate to="/" replace />
-          ) : loading ? null : user ? (
-            <>
-              <NavBar isAdmin={isAdmin} />
-              <QueuePage isAdmin={isAdmin} />
-            </>
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
-      />
-      <Route
-        path="/tickets/:id"
-        element={
-          !isAuthenticated ? (
-            <Navigate to="/" replace />
-          ) : loading ? null : user ? (
-            <>
-              <NavBar isAdmin={isAdmin} />
-              <TicketDetailPage user={user} isAdmin={isAdmin} />
-            </>
-          ) : (
-            <Navigate to="/home" replace />
-          )
-        }
-      />
+      >
+        <Route element={<AppShell user={user} isAdmin={isAdmin} />}>
+          <Route path="/home" element={<DashboardPage user={user} />} />
+          <Route path="/tickets" element={<TicketsLayout isAdmin={isAdmin} />}>
+            <Route index element={null} />
+            <Route path=":id" element={<TicketDetail user={user} isAdmin={isAdmin} />} />
+          </Route>
+          <Route element={<RequireAdmin isAdmin={isAdmin} />}>
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+          </Route>
+        </Route>
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

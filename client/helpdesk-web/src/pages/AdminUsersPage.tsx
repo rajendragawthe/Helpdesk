@@ -87,7 +87,7 @@ function AdminUsersPage() {
   }
 
   return (
-    <section className="px-8 py-10 text-left">
+    <section className="mx-auto max-w-5xl p-6 text-left">
       <h1 className="mb-6 text-[32px]">Manage Agents</h1>
 
       <Card className="mb-8">
