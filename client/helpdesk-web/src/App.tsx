@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage'
 import HomePage from './pages/HomePage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import QueuePage from './pages/QueuePage'
+import TicketDetailPage from './pages/TicketDetailPage'
 import { useCurrentUser } from './hooks/useCurrentUser'
 
 function App() {
@@ -69,6 +70,21 @@ function App() {
             <>
               <NavBar isAdmin={isAdmin} />
               <QueuePage isAdmin={isAdmin} />
+            </>
+          ) : (
+            <Navigate to="/home" replace />
+          )
+        }
+      />
+      <Route
+        path="/tickets/:id"
+        element={
+          !isAuthenticated ? (
+            <Navigate to="/" replace />
+          ) : loading ? null : user ? (
+            <>
+              <NavBar isAdmin={isAdmin} />
+              <TicketDetailPage user={user} isAdmin={isAdmin} />
             </>
           ) : (
             <Navigate to="/home" replace />
