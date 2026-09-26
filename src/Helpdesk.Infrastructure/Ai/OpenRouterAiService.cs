@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -6,9 +7,31 @@ using Helpdesk.Core.Models;
 
 namespace Helpdesk.Infrastructure.Ai;
 
-public class OpenRouterAiService(HttpClient httpClient, OpenRouterOptions options) : IAiService
+public class OpenRouterAiService : IAiService
 {
+    private readonly HttpClient httpClient;
+    private readonly OpenRouterOptions options;
+    private readonly Func<TimeSpan, CancellationToken, Task> delay;
+
+    public OpenRouterAiService(HttpClient httpClient, OpenRouterOptions options)
+        : this(httpClient, options, Task.Delay)
+    {
+    }
+
+    // Internal so DI (public constructors only) keeps selecting the 2-arg constructor.
+    internal OpenRouterAiService(
+        HttpClient httpClient, OpenRouterOptions options, Func<TimeSpan, CancellationToken, Task> delay)
+    {
+        this.httpClient = httpClient;
+        this.options = options;
+        this.delay = delay;
+    }
+
     private const int MaxSummaryLength = 1000;
+    private const int MaxBodySnippetLength = 300;
+
+    // One entry per retry: at most 2 retries (3 attempts in total).
+    private static readonly TimeSpan[] RetryBackoff = [TimeSpan.FromMilliseconds(500), TimeSpan.FromMilliseconds(1500)];
 
     private static readonly string SystemPrompt =
         "You triage customer support emails for a helpdesk. "
@@ -22,6 +45,22 @@ public class OpenRouterAiService(HttpClient httpClient, OpenRouterOptions option
 
     public async Task<ClassificationResult> ClassifyAsync(
         string subject, string body, CancellationToken cancellationToken = default)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                return await AttemptAsync(subject, body, cancellationToken);
+            }
+            catch (Exception ex) when (attempt < RetryBackoff.Length && IsTransient(ex, cancellationToken))
+            {
+                await delay(RetryBackoff[attempt], cancellationToken);
+            }
+        }
+    }
+
+    private async Task<ClassificationResult> AttemptAsync(
+        string subject, string body, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
@@ -41,16 +80,86 @@ public class OpenRouterAiService(HttpClient httpClient, OpenRouterOptions option
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
-        var completion = await response.Content.ReadAsStringAsync(cancellationToken);
-        return ParseResult(ExtractContent(completion));
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(DescribeHttpFailure(response.StatusCode, responseBody), null, response.StatusCode);
+        }
+
+        return ParseResult(ExtractContent(responseBody));
     }
+
+    private static bool IsTransient(Exception ex, CancellationToken cancellationToken) => ex switch
+    {
+        // Caller cancellation must propagate; a timeout (token not cancelled) is transient.
+        OperationCanceledException => !cancellationToken.IsCancellationRequested && ex is TaskCanceledException,
+        HttpRequestException { StatusCode: { } status } => IsTransientStatus((int)status),
+        TransientProviderException => true,
+        _ => false,
+    };
+
+    private static bool IsTransientStatus(int status) => status is 408 or 429 or 500 or 502 or 503 or 504;
+
+    private static string DescribeHttpFailure(HttpStatusCode status, string responseBody)
+    {
+        var message = $"OpenRouter returned HTTP {(int)status} ({status})";
+        var provider = TryReadError(responseBody);
+        if (provider is not null)
+        {
+            message += $": {provider.Value.Message}" + (provider.Value.Code is { } code ? $" (code {code})" : "");
+        }
+
+        var snippet = responseBody.Length > MaxBodySnippetLength ? responseBody[..MaxBodySnippetLength] : responseBody;
+        return snippet.Length == 0 ? message : $"{message}. Body: {snippet}";
+    }
+
+    private static (string Message, int? Code, string? ErrorType)? TryReadError(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("error", out var error)
+                || error.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var message = error.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String
+                ? m.GetString() ?? "unknown error"
+                : "unknown error";
+            int? code = error.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.Number && c.TryGetInt32(out var ci)
+                ? ci
+                : null;
+            var errorType = error.TryGetProperty("metadata", out var meta)
+                && meta.ValueKind == JsonValueKind.Object
+                && meta.TryGetProperty("error_type", out var t)
+                && t.ValueKind == JsonValueKind.String
+                    ? t.GetString()
+                    : null;
+            return (message, code, errorType);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private sealed class TransientProviderException(string message) : InvalidOperationException(message);
 
     private static string ExtractContent(string completionJson)
     {
         using var doc = ParseJson(completionJson, "OpenRouter returned a non-JSON response.");
         var root = doc.RootElement;
+
+        if (TryReadError(completionJson) is { } error)
+        {
+            var text = $"OpenRouter returned an error: {error.Message}"
+                + (error.Code is { } code ? $" (code {code})" : "");
+            var transient = error.Code is 408 or 429 or >= 500 || error.ErrorType == "provider_overloaded";
+            throw transient ? new TransientProviderException(text) : new InvalidOperationException(text);
+        }
 
         if (root.ValueKind != JsonValueKind.Object
             || !root.TryGetProperty("choices", out var choices)
