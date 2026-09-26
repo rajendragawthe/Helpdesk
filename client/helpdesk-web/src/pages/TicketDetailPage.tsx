@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { useMsal } from '@azure/msal-react'
 import { format } from 'date-fns'
@@ -23,6 +23,11 @@ function formatDate(value: string): string {
 
 function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
   const { id } = useParams()
+  // Keyed by id so every piece of state resets when the route param changes.
+  return <TicketDetailContent key={id} id={id} user={user} isAdmin={isAdmin} />
+}
+
+function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id: string | undefined }) {
   const { instance } = useMsal()
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -31,38 +36,49 @@ function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
   const draftSeeded = useRef(false)
+  const active = useRef(true)
 
   useEffect(() => {
-    let cancelled = false
-    draftSeeded.current = false
-    async function load() {
-      setLoadError(null)
-      try {
-        const response = await apiFetch(instance, `/api/tickets/${id}`)
-        if (!response.ok) {
-          throw new Error(await errorMessage(response))
-        }
-        const data = (await response.json()) as TicketDetail
-        if (cancelled) {
-          return
-        }
-        setTicket(data)
-        // Seed the editor with the AI draft once; later reloads must never overwrite the agent's edits.
-        if (!draftSeeded.current) {
-          draftSeeded.current = true
-          setText(data.draftReply ?? '')
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : 'Unknown error')
-        }
-      }
-    }
-    load()
+    active.current = true
     return () => {
-      cancelled = true
+      active.current = false
+    }
+  }, [])
+
+  // Fetches the ticket detail; resolves to the data or an error message. Does not touch state itself.
+  const fetchTicket = useCallback(async (): Promise<{ data?: TicketDetail; error?: string }> => {
+    try {
+      const response = await apiFetch(instance, `/api/tickets/${id}`)
+      if (!response.ok) {
+        return { error: await errorMessage(response) }
+      }
+      return { data: (await response.json()) as TicketDetail }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
   }, [instance, id])
+
+  const applyFetched = useCallback((result: { data?: TicketDetail; error?: string }) => {
+    if (!active.current) {
+      return
+    }
+    if (result.error) {
+      setLoadError(result.error)
+      return
+    }
+    if (result.data) {
+      setTicket(result.data)
+      // Seed the editor with the AI draft once; later reloads must never overwrite the agent's edits.
+      if (!draftSeeded.current) {
+        draftSeeded.current = true
+        setText(result.data.draftReply ?? '')
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchTicket().then(applyFetched)
+  }, [fetchTicket, applyFetched])
 
   async function act(path: string, init: RequestInit, successNotice?: string): Promise<boolean> {
     setBusy(true)
@@ -71,19 +87,48 @@ function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
     try {
       const response = await apiFetch(instance, path, init)
       if (!response.ok) {
-        setActionError(await errorMessage(response))
+        const message = await errorMessage(response)
+        if (!active.current) {
+          return false
+        }
+        setActionError(message)
+        if (response.status === 409 || response.status === 403) {
+          // Someone else changed the ticket; refresh so the assignee and buttons reflect reality.
+          const refreshed = await fetchTicket()
+          if (refreshed.data && active.current) {
+            setTicket(refreshed.data)
+          }
+        }
         return false
       }
-      setTicket((await response.json()) as TicketDetail)
+      let data: TicketDetail
+      try {
+        data = (await response.json()) as TicketDetail
+      } catch {
+        if (active.current) {
+          setActionError(
+            'The request succeeded but the response could not be read; reload the page to see the current state. Do not send the reply again.',
+          )
+        }
+        return false
+      }
+      if (!active.current) {
+        return true
+      }
+      setTicket(data)
       if (successNotice) {
         setNotice(successNotice)
       }
       return true
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Unknown error')
+      if (active.current) {
+        setActionError(err instanceof Error ? err.message : 'Unknown error')
+      }
       return false
     } finally {
-      setBusy(false)
+      if (active.current) {
+        setBusy(false)
+      }
     }
   }
 
@@ -118,7 +163,7 @@ function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
   }
 
   if (!ticket) {
-    return <main className="mx-auto max-w-4xl px-8 py-8 text-sm text-muted-foreground">Loading…</main>
+    return <main role="status" className="mx-auto max-w-4xl px-8 py-8 text-sm text-muted-foreground">Loading…</main>
   }
 
   const isAssignee = ticket.assignee !== null && ticket.assignee.id === user?.id
@@ -221,6 +266,7 @@ function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
               value={text}
               onChange={(event) => setText(event.target.value)}
               rows={10}
+              aria-label="Reply text"
               disabled={!canAct || busy}
               placeholder={ticket.draftReply ? undefined : 'Write your reply…'}
             />
