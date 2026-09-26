@@ -36,5 +36,8 @@ npm run dev
 ```
 Runs at `http://localhost:5173`.
 
+### AI classification and draft replies (optional)
+AI is opt-in like email ingestion: with no `OpenRouter` config (or `OpenRouter:Enabled=false`) the backend still starts and tickets simply stay unclassified and undrafted. To enable classification and draft replies, set `OpenRouter:ApiKey` with `dotnet user-secrets` and see `CLAUDE.md`'s "AI classification" and "AI draft reply" sections.
+
 ### Email ingestion (optional)
 The backend runs fine with no `GraphApi` config — the Microsoft Graph email poller is opt-in and simply stays disabled. To enable it, see `CLAUDE.md`'s "Email ingestion (Phase 4 done)" section for the required Entra app registration and config.

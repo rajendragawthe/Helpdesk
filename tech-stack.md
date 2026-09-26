@@ -42,7 +42,7 @@ Helpdesk.slnx
 │   │   │   └── Migrations/
 │   │   ├── Repositories/             # EF Core implementations of Core interfaces
 │   │   ├── GraphApi/                 # Microsoft Graph mail client (IMailClient impl) + AddGraphApi(IConfiguration) DI extension
-│   │   └── Ai/                       # OpenRouter client implementing IAiService
+│   │   └── Ai/                       # OpenRouter client implementing IAiService (classify + draft reply); Ai/Kb = hardcoded KB (embedded kb.json)
 │   │
 │   └── Helpdesk.Application/         # Use-cases orchestrating Core + Infrastructure
 │       ├── DependencyInjection.cs    # AddApplication(IConfiguration) — registers app services + hosted services
@@ -66,7 +66,7 @@ Helpdesk.slnx
 
 ## Supporting pieces
 - **Email ingestion** (Phase 4, done): Microsoft Graph SDK, polled via a hosted background service (`BackgroundService`, in `Helpdesk.Application`) — avoids Graph webhook subscription/renewal complexity at MVP volume (~100 tickets/day). App-only auth (`ClientSecretCredential`) via a separate Entra app registration from the API's own sign-in app, requiring `Mail.ReadWrite` + `Mail.Send` Graph application permissions. Opt-in: absent `GraphApi` config disables the poller instead of crashing the app — see `CLAUDE.md`'s "Email ingestion" section.
-- **AI calls**: OpenRouter via `HttpClient` (typed client in `Helpdesk.Infrastructure/Ai`)
+- **AI calls** (Phases 5-6, done): OpenRouter via `HttpClient` (typed client in `Helpdesk.Infrastructure/Ai`) for classification/summary and draft replies. Draft replies are grounded in a hardcoded KB (embedded `kb.json`, keyword-matched with a category boost in `Helpdesk.Application/DraftReply`), not vector search or KB CRUD. Opt-in: absent `OpenRouter` config disables all AI without crashing the app.
 - **Migrations**: EF Core Migrations, generated from `Helpdesk.Infrastructure`, applied via `dotnet ef database update` or on startup for dev
 - **Request validation**: FluentValidation, auto-wired via `AddFluentValidationAutoValidation()` — see `CLAUDE.md`'s "Request validation" section
 
