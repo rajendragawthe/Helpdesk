@@ -29,6 +29,7 @@ export type TicketMessage = {
   isFromUser: boolean
   receivedAt: string
   bodyText: string
+  bodyHtml: string | null
 }
 
 export type TicketDetail = TicketListItem & {

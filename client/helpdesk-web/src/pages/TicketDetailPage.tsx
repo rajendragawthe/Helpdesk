@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { apiFetch } from '../api/apiFetch'
 import { errorMessage, type TicketDetail } from '../api/tickets'
 import type { CurrentUser } from '../hooks/useCurrentUser'
+import MessageBody from '../components/MessageBody'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -216,7 +217,7 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap text-sm">{message.bodyText}</p>
+              <MessageBody message={message} />
             </CardContent>
           </Card>
         ))}

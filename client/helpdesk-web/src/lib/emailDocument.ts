@@ -1,0 +1,35 @@
+// Builds the document rendered inside the sandboxed email iframe. The iframe (no allow-scripts) and the CSP
+// below are the security boundary; removing active elements here is defence in depth and keeps the layout sane.
+const CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; font-src data:"
+
+const BASE_STYLE = [
+  'body{margin:0;padding:12px;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;',
+  'font-size:14px;line-height:1.5;color:#1f2937;background:#ffffff;overflow-wrap:anywhere}',
+  'img,table{max-width:100%}img{height:auto}a{color:#2563eb}',
+].join('')
+
+// Elements that can load, run or navigate: dropped before the HTML is re-serialized.
+const ACTIVE_ELEMENTS = 'script, noscript, iframe, frame, frameset, object, embed, applet, form, link, meta, base, template'
+
+export function buildEmailDocument(html: string): string {
+  // DOMParser documents are inert: nothing in `html` runs or loads while it is parsed here.
+  const parsed = new DOMParser().parseFromString(html, 'text/html')
+
+  const styles = Array.from(parsed.querySelectorAll('style')).map((style) => style.textContent ?? '')
+  parsed.querySelectorAll(`${ACTIVE_ELEMENTS}, style`).forEach((element) => element.remove())
+
+  // The email's own CSS is kept; a closing-tag sequence can never appear in it, but strip it defensively.
+  const emailCss = styles.join('\n').replace(/<\/style/gi, '')
+
+  return [
+    '<!doctype html><html><head><meta charset="utf-8">',
+    `<meta http-equiv="Content-Security-Policy" content="${CSP}">`,
+    '<meta name="referrer" content="no-referrer">',
+    '<base target="_blank">',
+    `<style>${BASE_STYLE}</style>`,
+    `<style>${emailCss}</style>`,
+    '</head><body>',
+    parsed.body.innerHTML,
+    '</body></html>',
+  ].join('')
+}
