@@ -113,17 +113,16 @@ public class TicketWorkflowService(
 
         try
         {
-            await mailClient.SendReplyAsync(target.ExternalMessageId!, body, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
+            // Deliberately not tied to the request's cancellation token: Graph may deliver the mail even if
+            // the caller disconnects, and cancelling would leave no stored message and invite a resend.
+            await mailClient.SendReplyAsync(target.ExternalMessageId!, body, CancellationToken.None);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to send the reply for ticket {TicketId}.", ticketId);
             return TicketResult<TicketDetail>.Fail(
-                TicketOutcome.SendFailed, "The reply could not be sent. Nothing was changed; please try again.");
+                TicketOutcome.SendFailed,
+                "The reply could not be confirmed as sent. Check the mailbox's Sent Items before trying again.");
         }
 
         try

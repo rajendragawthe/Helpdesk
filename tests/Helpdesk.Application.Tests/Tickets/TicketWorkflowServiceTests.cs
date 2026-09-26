@@ -511,14 +511,31 @@ public class TicketWorkflowServiceTests
     }
 
     [Fact]
-    public async Task SendReplyAsync_CancelledWhileTokenCancelled_Propagates()
+    public async Task SendReplyAsync_AlreadyCancelledToken_StillSendsAndRecords()
     {
         var ticket = AddReplyableTicket(_alice);
-        _mail.SendException = new OperationCanceledException();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(
-            () => Create().SendReplyAsync(AliceCaller, ticket.Id, "Reply", cts.Token));
+        var result = await Create().SendReplyAsync(AliceCaller, ticket.Id, "Reply", cts.Token);
+
+        Assert.True(result.IsSuccess);
+        Assert.Single(_mail.SentReplies);
+        Assert.Equal(2, ticket.Messages.Count);
+        Assert.Equal(TicketStatus.Replied, ticket.Status);
+    }
+
+    [Fact]
+    public async Task SendReplyAsync_SendTimesOut_IsSendFailedAndNothingIsStored()
+    {
+        var ticket = AddReplyableTicket(_alice);
+        _mail.SendException = new OperationCanceledException();
+
+        var result = await Create().SendReplyAsync(AliceCaller, ticket.Id, "Reply");
+
+        Assert.Equal(TicketOutcome.SendFailed, result.Outcome);
+        Assert.Contains("Sent Items", result.Message);
+        Assert.Single(ticket.Messages);
+        Assert.Equal(TicketStatus.InReview, ticket.Status);
     }
 }

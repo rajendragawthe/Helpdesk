@@ -25,6 +25,15 @@ public class HelpdeskUserClaimsTransformation(IUserRepository userRepository) : 
             return principal;
         }
 
+        // Only the server-derived user id may exist; drop anything the token itself carries.
+        foreach (var existing in principal.Identities)
+        {
+            foreach (var forged in existing.FindAll(UserIdClaimType).ToList())
+            {
+                existing.RemoveClaim(forged);
+            }
+        }
+
         var identity = new ClaimsIdentity();
         identity.AddClaim(new Claim(ProcessedClaimType, "true"));
 

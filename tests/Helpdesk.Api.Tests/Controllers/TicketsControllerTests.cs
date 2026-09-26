@@ -16,7 +16,7 @@ public class TicketsControllerTests
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly FakeTicketWorkflowService _workflow = new();
 
-    private static ClaimsPrincipal PrincipalFor(bool withUserId = true, string role = "Agent", bool withUpn = false)
+    private static ClaimsPrincipal PrincipalFor(bool withUserId = true, string role = "Agent", bool withUpn = false, bool withUsername = true)
     {
         var identity = new ClaimsIdentity("test");
         if (withUserId)
@@ -25,7 +25,11 @@ public class TicketsControllerTests
         }
 
         identity.AddClaim(new Claim(ClaimTypes.Role, role));
-        identity.AddClaim(new Claim("preferred_username", "alice@example.com"));
+        if (withUsername)
+        {
+            identity.AddClaim(new Claim("preferred_username", "alice@example.com"));
+        }
+
         if (withUpn)
         {
             identity.AddClaim(new Claim(ClaimTypes.Upn, "upn@example.com"));
@@ -120,6 +124,14 @@ public class TicketsControllerTests
         await Create(PrincipalFor(withUpn: true)).List(null);
 
         Assert.Equal("upn@example.com", _workflow.LastCaller!.Email);
+    }
+
+    [Fact]
+    public async Task Caller_EmailFallsBackToUnknownAgent_WhenNoIdentityClaimsExist()
+    {
+        await Create(PrincipalFor(withUsername: false)).List(null);
+
+        Assert.Equal("unknown-agent", _workflow.LastCaller!.Email);
     }
 
     [Fact]

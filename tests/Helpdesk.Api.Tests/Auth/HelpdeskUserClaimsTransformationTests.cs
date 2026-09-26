@@ -50,6 +50,34 @@ public class HelpdeskUserClaimsTransformationTests
     }
 
     [Fact]
+    public async Task ForgedUserIdClaim_IsReplacedByTheRealUserId()
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = "a@example.com", DisplayName = "A", Role = Role.Agent, ExternalObjectId = "obj-1" };
+        _users.Users.Add(user);
+        var principal = Principal("obj-1", "a@example.com");
+        ((ClaimsIdentity)principal.Identity!).AddClaim(
+            new Claim(HelpdeskUserClaimsTransformation.UserIdClaimType, Guid.NewGuid().ToString()));
+
+        var result = await new HelpdeskUserClaimsTransformation(_users).TransformAsync(principal);
+
+        var claims = result.FindAll(HelpdeskUserClaimsTransformation.UserIdClaimType).ToList();
+        Assert.Single(claims);
+        Assert.Equal(user.Id.ToString(), claims[0].Value);
+    }
+
+    [Fact]
+    public async Task ForgedUserIdClaim_OnAnUnknownUser_IsRemoved()
+    {
+        var principal = Principal("nobody", "nobody@example.com");
+        ((ClaimsIdentity)principal.Identity!).AddClaim(
+            new Claim(HelpdeskUserClaimsTransformation.UserIdClaimType, Guid.NewGuid().ToString()));
+
+        var result = await new HelpdeskUserClaimsTransformation(_users).TransformAsync(principal);
+
+        Assert.Empty(result.FindAll(HelpdeskUserClaimsTransformation.UserIdClaimType));
+    }
+
+    [Fact]
     public async Task TransformingTwice_DoesNotDuplicateTheUserIdClaim()
     {
         var user = new User { Id = Guid.NewGuid(), Email = "a@example.com", DisplayName = "A", Role = Role.Admin, ExternalObjectId = "obj-1" };

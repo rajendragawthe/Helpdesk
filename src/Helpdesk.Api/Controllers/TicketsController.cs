@@ -84,7 +84,8 @@ public class TicketsController(ITicketWorkflowService workflow) : ControllerBase
             return false;
         }
 
-        var email = User.FindFirstValue(ClaimTypes.Upn) ?? User.FindFirstValue("preferred_username") ?? string.Empty;
+        var email = User.FindFirstValue(ClaimTypes.Upn) ?? User.FindFirstValue("preferred_username")
+            ?? User.FindFirstValue(ClaimTypes.Email) ?? User.FindFirstValue("email") ?? "unknown-agent";
         caller = new TicketCaller(userId, email, User.IsInRole(nameof(Role.Admin)));
         return true;
     }
