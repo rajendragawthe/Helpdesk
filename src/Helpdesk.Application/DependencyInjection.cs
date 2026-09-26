@@ -2,6 +2,7 @@ using Helpdesk.Application.Classification;
 using Helpdesk.Application.DraftReply;
 using Helpdesk.Application.EmailIngestion;
 using Helpdesk.Application.Review;
+using Helpdesk.Application.Tickets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,6 +48,10 @@ public static class DependencyInjection
             services.AddSingleton(ReviewOptions.Parse(configuration[ReviewOptions.ConfigKey]));
             services.AddScoped<IReviewFlagService, ReviewFlagService>();
         }
+
+        // Listing, claiming and replying do not depend on AI. The mail client is optional (only registered when Graph
+        // is configured); without it a send returns a SendFailed outcome instead of crashing the host.
+        services.AddScoped<ITicketWorkflowService, TicketWorkflowService>();
 
         return services;
     }
