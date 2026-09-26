@@ -63,9 +63,9 @@
 44. Frontend: Ticket detail page — thread view, AI summary, editable draft textarea, Send button
 45. Manual test: full loop — email in → ticket appears in queue with draft → agent edits and sends → reply arrives in test inbox as a threaded reply
 
-## Phase 8 — Escalation Path (Low Confidence) — backend done (manual test and queue badge pending)
+## Phase 8 — Escalation Path (Low Confidence) — backend done and manually verified (queue badge pending)
 46. Define confidence threshold — done, as a `Review:ConfidenceThreshold` setting (default 0.7) evaluated by `ReviewPolicy` rather than on the `IAiService.ClassifyAsync` response (`IAiService` is unchanged)
-47. If below threshold, classification fails, category is Other or the draft failed, tag the ticket for manual review — done (`Ticket.ReviewReasons` flags + `ReviewFlagService`, migration `AddTicketReviewReasons`); manual test pending (needs the user's secrets and real emails; see CLAUDE.md "Review flags")
+47. If below threshold, classification fails, category is Other or the draft failed, tag the ticket for manual review — done (`Ticket.ReviewReasons` flags + `ReviewFlagService`, migration `AddTicketReviewReasons`); manual test done 2026-09-27: a clear billing email stayed at `ReviewReasons` 0 and a vague email (confidence 0.55) got `ReviewReasons` 1 (LowConfidence) and still got a draft and `InReview` (see CLAUDE.md "Review flags")
 48. Frontend: visual indicator on queue for escalated/low-confidence tickets — pending (needs Phase 7's queue page and DTO)
 
 ## Phase 9 — Hardening & Polish
