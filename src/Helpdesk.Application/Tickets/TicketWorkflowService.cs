@@ -12,6 +12,9 @@ public class TicketWorkflowService(
 {
     public const int MaxReplyLength = 10_000;
 
+    /// <summary>Largest customer email HTML returned to the client; bigger bodies fall back to plain text only.</summary>
+    public const int MaxBodyHtmlLength = 500_000;
+
     public async Task<TicketResult<IReadOnlyList<TicketListItem>>> ListAsync(TicketCaller caller, TicketFilter filter)
     {
         if (filter == TicketFilter.All && !caller.IsAdmin)

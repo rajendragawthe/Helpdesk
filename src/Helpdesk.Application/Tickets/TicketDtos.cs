@@ -22,7 +22,13 @@ public record TicketListItem(
     int ReviewReasons,
     bool NeedsReview);
 
-public record TicketMessageDto(Guid Id, string Sender, bool IsFromUser, DateTimeOffset ReceivedAt, string BodyText);
+public record TicketMessageDto(
+    Guid Id,
+    string Sender,
+    bool IsFromUser,
+    DateTimeOffset ReceivedAt,
+    string BodyText,
+    string? BodyHtml);
 
 public record TicketDetail(
     Guid Id,

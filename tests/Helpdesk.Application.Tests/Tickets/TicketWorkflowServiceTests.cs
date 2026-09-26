@@ -538,4 +538,76 @@ public class TicketWorkflowServiceTests
         Assert.Single(ticket.Messages);
         Assert.Equal(TicketStatus.InReview, ticket.Status);
     }
+
+    // ---- Customer email HTML ----
+
+    [Fact]
+    public async Task GetAsync_CustomerHtmlBody_IsReturnedRawAsBodyHtml_AndBodyTextIsStillPlain()
+    {
+        const string html = "<html><body><p>Hello <b>there</b></p><script>alert('x')</script></body></html>";
+        var ticket = AddTicket(messages: [Customer(html, DateTimeOffset.UtcNow.AddMinutes(-20))]);
+
+        var message = Assert.Single((await Create().GetAsync(ticket.Id)).Value!.Messages);
+
+        Assert.Equal(html, message.BodyHtml);
+        Assert.Equal("Hello there", message.BodyText);
+    }
+
+    [Fact]
+    public async Task GetAsync_AgentMessageWithTags_NeverHasBodyHtml()
+    {
+        var ticket = AddTicket(messages:
+        [
+            Customer("<p>hi</p>", DateTimeOffset.UtcNow.AddMinutes(-20)),
+            AgentMessage("<b>not html</b> we typed this", DateTimeOffset.UtcNow.AddMinutes(-10)),
+        ]);
+
+        var messages = (await Create().GetAsync(ticket.Id)).Value!.Messages;
+
+        Assert.NotNull(messages[0].BodyHtml);
+        Assert.Null(messages[1].BodyHtml);
+        Assert.Equal("<b>not html</b> we typed this", messages[1].BodyText);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   \n  ")]
+    public async Task GetAsync_BlankCustomerBody_HasNoBodyHtml(string body)
+    {
+        var ticket = AddTicket(messages: [Customer(body, DateTimeOffset.UtcNow.AddMinutes(-5))]);
+
+        var message = Assert.Single((await Create().GetAsync(ticket.Id)).Value!.Messages);
+
+        Assert.Null(message.BodyHtml);
+    }
+
+    [Fact]
+    public async Task GetAsync_PlainTextCustomerEmail_HasNoBodyHtml_SoTheTextViewKeepsItsLineBreaks()
+    {
+        var ticket = AddTicket(messages: [Customer("Hi team,\n\nplease refund me 5 < 10.\nThanks",DateTimeOffset.UtcNow.AddMinutes(-5))]);
+
+        var message = Assert.Single((await Create().GetAsync(ticket.Id)).Value!.Messages);
+
+        Assert.Null(message.BodyHtml);
+        Assert.Contains("refund me", message.BodyText);
+    }
+
+    [Fact]
+    public async Task GetAsync_BodyHtmlSizeCap_ExactlyAtTheLimitIsReturned_OneOverIsNull()
+    {
+        var atLimit = "<p>" + new string('x', TicketWorkflowService.MaxBodyHtmlLength - 3);
+        var overLimit = atLimit + "y";
+        Assert.Equal(TicketWorkflowService.MaxBodyHtmlLength, atLimit.Length);
+        var ticket = AddTicket(messages:
+        [
+            Customer(atLimit, DateTimeOffset.UtcNow.AddMinutes(-20), "ext-a"),
+            Customer(overLimit, DateTimeOffset.UtcNow.AddMinutes(-10), "ext-b"),
+        ]);
+
+        var messages = (await Create().GetAsync(ticket.Id)).Value!.Messages;
+
+        Assert.Equal(atLimit, messages[0].BodyHtml);
+        Assert.Null(messages[1].BodyHtml);
+        Assert.False(string.IsNullOrEmpty(messages[1].BodyText));
+    }
 }
