@@ -1,5 +1,6 @@
 using Helpdesk.Application.Classification;
 using Helpdesk.Application.DraftReply;
+using Helpdesk.Application.Review;
 using Helpdesk.Core.Entities;
 using Helpdesk.Core.Enums;
 using Helpdesk.Core.Interfaces;
@@ -41,8 +42,8 @@ public class EmailIngestionService(
 
                 var newTicketId = await ProcessEmailAsync(email, ticketRepository, messageRepository);
 
-                // Only a brand-new ticket is classified and drafted (never a reply appended to an
-                // existing conversation). Both services are optional: they are only registered when
+                // Only a brand-new ticket is classified, drafted and review-flagged (never a reply appended to an
+                // existing conversation). These services are optional: they are only registered when
                 // OpenRouter is configured, so ingestion keeps working without AI. Drafting runs after
                 // classification so the drafter can use the stored category. The drafter gets its own
                 // fresh scope (and DbContext) so a failed classification save, whose Added entity would
@@ -59,6 +60,14 @@ public class EmailIngestionService(
                     if (draftScope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
                     {
                         await drafter.DraftReplyAsync(ticketId, cancellationToken);
+                    }
+
+                    // Review flags are derived from what classification and drafting actually stored, so they
+                    // run last, in their own scope for the same isolation reason as the drafter.
+                    using var reviewScope = scopeFactory.CreateScope();
+                    if (reviewScope.ServiceProvider.GetService<IReviewFlagService>() is { } reviewer)
+                    {
+                        await reviewer.EvaluateAsync(ticketId, cancellationToken);
                     }
                 }
             }

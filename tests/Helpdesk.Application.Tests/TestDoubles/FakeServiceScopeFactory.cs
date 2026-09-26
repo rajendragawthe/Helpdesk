@@ -1,5 +1,6 @@
 using Helpdesk.Application.Classification;
 using Helpdesk.Application.DraftReply;
+using Helpdesk.Application.Review;
 using Helpdesk.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,15 +11,16 @@ namespace Helpdesk.Application.Tests.TestDoubles;
 /// resolves the SAME FakeTicketRepository/FakeMessageRepository instances regardless of how many
 /// scopes are created. This mirrors production DI shape (a new scope per message) while still
 /// letting tests inspect state across all the "scopes" EmailIngestionService creates in one tick.
-/// IClassificationService and IDraftReplyService are optional (null = "AI not configured"), matching
-/// production where they are only registered when OpenRouter is configured.
+/// IClassificationService, IDraftReplyService and IReviewFlagService are optional (null = "AI not
+/// configured"), matching production where they are only registered when OpenRouter is configured.
 /// No DI container or mocking library involved.
 /// </summary>
 public class FakeServiceScopeFactory(
     ITicketRepository ticketRepository,
     IMessageRepository messageRepository,
     IClassificationService? classificationService = null,
-    IDraftReplyService? draftReplyService = null)
+    IDraftReplyService? draftReplyService = null,
+    IReviewFlagService? reviewFlagService = null)
     : IServiceScopeFactory
 {
     public int ScopesCreated { get; private set; }
@@ -31,7 +33,7 @@ public class FakeServiceScopeFactory(
         ScopesCreated++;
         var scopeIndex = ScopesCreated;
         return new FakeServiceScope(new FakeServiceProvider(
-            ticketRepository, messageRepository, classificationService, draftReplyService,
+            ticketRepository, messageRepository, classificationService, draftReplyService, reviewFlagService,
             serviceType => AiServiceResolutions.Add((serviceType, scopeIndex))));
     }
 
@@ -49,6 +51,7 @@ public class FakeServiceScopeFactory(
         IMessageRepository messageRepository,
         IClassificationService? classificationService,
         IDraftReplyService? draftReplyService,
+        IReviewFlagService? reviewFlagService,
         Action<Type> onAiServiceResolved)
         : IServiceProvider
     {
@@ -74,6 +77,12 @@ public class FakeServiceScopeFactory(
             {
                 onAiServiceResolved(serviceType);
                 return draftReplyService;
+            }
+
+            if (serviceType == typeof(IReviewFlagService))
+            {
+                onAiServiceResolved(serviceType);
+                return reviewFlagService;
             }
 
             return null;
