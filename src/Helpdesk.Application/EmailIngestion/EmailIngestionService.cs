@@ -1,3 +1,4 @@
+using Helpdesk.Application.Classification;
 using Helpdesk.Core.Entities;
 using Helpdesk.Core.Enums;
 using Helpdesk.Core.Interfaces;
@@ -37,7 +38,16 @@ public class EmailIngestionService(
                 var ticketRepository = scope.ServiceProvider.GetRequiredService<ITicketRepository>();
                 var messageRepository = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
 
-                await ProcessEmailAsync(email, ticketRepository, messageRepository);
+                var newTicketId = await ProcessEmailAsync(email, ticketRepository, messageRepository);
+
+                // Only a brand-new ticket is classified (never a reply appended to an existing
+                // conversation). IClassificationService is optional: it is only registered when
+                // OpenRouter is configured, so ingestion keeps working without AI.
+                if (newTicketId is { } ticketId
+                    && scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
+                {
+                    await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
+                }
             }
             catch (Exception ex)
             {
@@ -50,7 +60,7 @@ public class EmailIngestionService(
         }
     }
 
-    private async Task ProcessEmailAsync(
+    private async Task<Guid?> ProcessEmailAsync(
         InboundEmailMessage email,
         ITicketRepository ticketRepository,
         IMessageRepository messageRepository)
@@ -58,9 +68,10 @@ public class EmailIngestionService(
         var existingMessage = await messageRepository.GetByExternalMessageIdAsync(email.ExternalMessageId);
         if (existingMessage is not null)
         {
-            return;
+            return null;
         }
 
+        Guid? newTicketId = null;
         var ticket = await ticketRepository.GetByConversationIdAsync(email.ConversationId);
 
         if (ticket is null)
@@ -76,6 +87,7 @@ public class EmailIngestionService(
                 UpdatedAt = email.ReceivedAt,
             };
             await ticketRepository.AddAsync(ticket);
+            newTicketId = ticket.Id;
         }
         else
         {
@@ -96,5 +108,6 @@ public class EmailIngestionService(
         await messageRepository.AddAsync(message);
 
         await mailClient.MarkAsProcessedAsync(email.ExternalMessageId);
+        return newTicketId;
     }
 }

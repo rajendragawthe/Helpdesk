@@ -1,3 +1,4 @@
+using Helpdesk.Application.Classification;
 using Helpdesk.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,9 +9,14 @@ namespace Helpdesk.Application.Tests.TestDoubles;
 /// resolves the SAME FakeTicketRepository/FakeMessageRepository instances regardless of how many
 /// scopes are created. This mirrors production DI shape (a new scope per message) while still
 /// letting tests inspect state across all the "scopes" EmailIngestionService creates in one tick.
+/// IClassificationService is optional (null = "AI not configured"), matching production where it is
+/// only registered when OpenRouter is configured.
 /// No DI container or mocking library involved.
 /// </summary>
-public class FakeServiceScopeFactory(ITicketRepository ticketRepository, IMessageRepository messageRepository)
+public class FakeServiceScopeFactory(
+    ITicketRepository ticketRepository,
+    IMessageRepository messageRepository,
+    IClassificationService? classificationService = null)
     : IServiceScopeFactory
 {
     public int ScopesCreated { get; private set; }
@@ -18,7 +24,7 @@ public class FakeServiceScopeFactory(ITicketRepository ticketRepository, IMessag
     public IServiceScope CreateScope()
     {
         ScopesCreated++;
-        return new FakeServiceScope(new FakeServiceProvider(ticketRepository, messageRepository));
+        return new FakeServiceScope(new FakeServiceProvider(ticketRepository, messageRepository, classificationService));
     }
 
     private sealed class FakeServiceScope(IServiceProvider serviceProvider) : IServiceScope
@@ -30,7 +36,10 @@ public class FakeServiceScopeFactory(ITicketRepository ticketRepository, IMessag
         }
     }
 
-    private sealed class FakeServiceProvider(ITicketRepository ticketRepository, IMessageRepository messageRepository)
+    private sealed class FakeServiceProvider(
+        ITicketRepository ticketRepository,
+        IMessageRepository messageRepository,
+        IClassificationService? classificationService)
         : IServiceProvider
     {
         public object? GetService(Type serviceType)
@@ -43,6 +52,11 @@ public class FakeServiceScopeFactory(ITicketRepository ticketRepository, IMessag
             if (serviceType == typeof(IMessageRepository))
             {
                 return messageRepository;
+            }
+
+            if (serviceType == typeof(IClassificationService))
+            {
+                return classificationService;
             }
 
             return null;

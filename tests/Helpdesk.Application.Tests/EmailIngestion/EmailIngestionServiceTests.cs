@@ -1,5 +1,6 @@
 using Helpdesk.Application.EmailIngestion;
 using Helpdesk.Application.Tests.TestDoubles;
+using Helpdesk.Core.Entities;
 using Helpdesk.Core.Enums;
 using Helpdesk.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -207,5 +208,77 @@ public class EmailIngestionServiceTests
         Assert.Equal(secondTicket.Id, secondMessage.TicketId);
         Assert.Equal("msg-second", secondMessage.ExternalMessageId);
         Assert.Equal(["msg-second"], mailClient.MarkedAsProcessed);
+    }
+
+    private static InboundEmailMessage Email(string messageId, string conversationId) => new(
+        ExternalMessageId: messageId,
+        ConversationId: conversationId,
+        FromAddress: "requester@example.com",
+        Subject: "Help please",
+        BodyHtml: "<p>I need help</p>",
+        ReceivedAt: DateTimeOffset.UtcNow);
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NewConversation_ClassifiesNewTicket()
+    {
+        var mailClient = new FakeMailClient(Email("msg-1", "conv-1"));
+        var ticketRepository = new FakeTicketRepository();
+        var classifier = new FakeClassificationService();
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        var ticket = Assert.Single(ticketRepository.Tickets);
+        Assert.Equal(ticket.Id, Assert.Single(classifier.ClassifiedTicketIds));
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ReplyToExistingConversation_DoesNotClassifyAgain()
+    {
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Help please",
+            RequesterEmail = "requester@example.com",
+            ConversationId = "conv-1",
+        });
+        var classifier = new FakeClassificationService();
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Empty(classifier.ClassifiedTicketIds);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NoClassificationServiceRegistered_StillCreatesTicket()
+    {
+        var ticketRepository = new FakeTicketRepository();
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository());
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-1", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Single(ticketRepository.Tickets);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ClassificationThrows_MessageStillMarkedProcessedAndOthersContinue()
+    {
+        var mailClient = new FakeMailClient(Email("msg-1", "conv-1"), Email("msg-2", "conv-2"));
+        var ticketRepository = new FakeTicketRepository();
+        var classifier = new FakeClassificationService { ExceptionToThrow = new InvalidOperationException("boom") };
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository(), classifier);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(2, ticketRepository.Tickets.Count);
+        Assert.Equal(["msg-1", "msg-2"], mailClient.MarkedAsProcessed);
     }
 }
