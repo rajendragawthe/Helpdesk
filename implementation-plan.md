@@ -42,12 +42,12 @@
 29. Mark processed emails as read/handled to avoid duplicate ingestion — done (`IMailClient.MarkAsProcessedAsync`, verified real messages no longer reprocessed on subsequent polls)
 30. Manual test: send a test email to the mailbox, confirm a ticket is created — done, verified 2026-09-21 against `epm1@prosaressolutions.onmicrosoft.com` (7 real unread emails ingested into 7 tickets/messages, correctly marked read afterward, zero errors on the following poll). Reply-threading half of this test (reply to an email, confirm it appends to the same ticket) was deliberately deferred rather than run in this session — the code path is implemented and covered by `EmailIngestionServiceTests`, but has not been exercised against a real Graph reply. Recommended before relying on this in production.
 
-## Phase 5 — AI Classification & Summary
-31. Define `IAiService` interface in `Helpdesk.Core/Interfaces` (`ClassifyAsync`, `SummarizeAsync`, `DraftReplyAsync`)
-32. Implement OpenRouter HTTP client in `Helpdesk.Infrastructure/Ai`
-33. Implement `ClassificationService` in `Helpdesk.Application`: calls AI on new ticket, stores category + summary on `Classification`
-34. Hook classification into the ingestion pipeline (runs right after ticket creation)
-35. Manual test: verify a new ticket gets a category and summary populated automatically
+## Phase 5 — AI Classification & Summary — done (manual test pending)
+31. Define `IAiService` interface in `Helpdesk.Core/Interfaces` — done. Deviation: `SummarizeAsync` was folded into `ClassifyAsync` (one call returns category + summary + confidence); `DraftReplyAsync` is deferred to Phase 6.
+32. Implement OpenRouter HTTP client in `Helpdesk.Infrastructure/Ai` — done (`OpenRouterAiService`, JSON-mode output, opt-in DI registration)
+33. Implement `ClassificationService` in `Helpdesk.Application`: calls AI on new ticket, stores category + summary on `Classification` — done (`Helpdesk.Application/Classification`, strips HTML body to plain text first)
+34. Hook classification into the ingestion pipeline (runs right after ticket creation) — done (`EmailIngestionService` classifies newly created tickets only; failures are logged and never fail ingestion)
+35. Manual test: verify a new ticket gets a category and summary populated automatically — pending (requires a real OpenRouter API key and a test email; see CLAUDE.md "AI classification" for how to run)
 
 ## Phase 6 — AI Draft Reply (Hardcoded KB)
 36. Create hardcoded KB as static content (JSON/config file or in-code constants) in `Helpdesk.Infrastructure/Ai`

@@ -9,7 +9,7 @@ public static partial class HtmlText
     {
         var withoutBlocks = ScriptOrStyleRegex().Replace(html, " ");
         var withoutTags = TagRegex().Replace(withoutBlocks, " ");
-        var decoded = WebUtility.HtmlDecode(withoutTags).Replace(' ', ' ');
+        var decoded = WebUtility.HtmlDecode(withoutTags).Replace('\u00A0', ' ');
         var collapsed = WhitespaceRegex().Replace(decoded, " ").Trim();
 
         return collapsed.Length <= maxLength ? collapsed : collapsed[..maxLength];
