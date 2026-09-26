@@ -55,13 +55,13 @@
 38. Store draft on the ticket; set ticket status to `InReview` — done (`DraftReplyService` sets `Ticket.DraftReply` + `InReview`; called by `EmailIngestionService` after classification for new tickets)
 39. Manual test: confirm a plausible draft reply is generated and stored for a new ticket — done, verified 2026-09-26 against the shared mailbox with the free model `nvidia/nemotron-3-super-120b-a12b:free`: a real email became a `Billing` (0.95) ticket with `Status` 1 (InReview) and a KB-grounded draft, no errors logged. Not verified live: a reply on the same thread not producing a second draft (unit-tested only). See CLAUDE.md "AI draft reply".
 
-## Phase 7 — Agent Queue & Reply UI — done (manual test pending)
+## Phase 7 — Agent Queue & Reply UI — done and manually verified
 40. `TicketsController`: `GET /api/tickets` (queue), `GET /api/tickets/{id}` — done (`filter=queue|mine|all`; explicit claim/release added: `POST .../claim`, `POST .../release`; detail returns the plain-text thread, summary and draft)
 41. `PUT /api/tickets/{id}/reply` — done (assignee/Admin only; validates, sends via Graph, stores the outbound message, marks `Replied`)
 42. Implement outbound email send via Graph API — done (`IMailClient.SendReplyAsync`, Graph reply on the latest customer message, so it threads; deviation: replies to the message rather than using `conversationId`)
 43. Frontend: Queue page — done (`QueuePage`, `/tickets`, Queue/Mine/All tabs)
 44. Frontend: Ticket detail page — done (`TicketDetailPage`, `/tickets/:id`: thread, AI summary, claim/release, editable draft, Send)
-45. Manual test: full loop — pending (needs the user's secrets, a real email and a readable inbox; see CLAUDE.md "Agent queue and reply"). Phase 7b (reopen on customer reply, keep assignee, AI re-draft) is not started.
+45. Manual test: full loop — done, verified 2026-09-27 (email in, queue, claim, edit draft, send, threaded reply received, follow-up send worked; see CLAUDE.md "Agent queue and reply"). Follow-ups from the test: show the customer's email as sandboxed HTML on the ticket page, and an app-shell/UI redesign. Phase 7b (reopen on customer reply, keep assignee, AI re-draft) is not started.
 
 ## Phase 8 — Escalation Path (Low Confidence) — backend done and manually verified (queue badge pending)
 46. Define confidence threshold — done, as a `Review:ConfidenceThreshold` setting (default 0.7) evaluated by `ReviewPolicy` rather than on the `IAiService.ClassifyAsync` response (`IAiService` is unchanged)
