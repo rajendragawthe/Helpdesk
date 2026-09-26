@@ -21,17 +21,27 @@ public class TicketsController(ITicketWorkflowService workflow) : ControllerBase
             return NoCaller();
         }
 
-        if (!Enum.TryParse<TicketFilter>(filter ?? nameof(TicketFilter.Queue), ignoreCase: true, out var parsed)
-            || !Enum.IsDefined(parsed))
+        var name = filter ?? nameof(TicketFilter.Queue);
+        if (!Enum.GetNames<TicketFilter>().Contains(name, StringComparer.OrdinalIgnoreCase))
         {
             return BadRequest(new { message = "filter must be one of: queue, mine, all." });
         }
+
+        var parsed = Enum.Parse<TicketFilter>(name, ignoreCase: true);
 
         return ToResult(await workflow.ListAsync(caller, parsed));
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> Get(Guid id) => ToResult(await workflow.GetAsync(id));
+    public async Task<IActionResult> Get(Guid id)
+    {
+        if (!TryGetCaller(out _))
+        {
+            return NoCaller();
+        }
+
+        return ToResult(await workflow.GetAsync(id));
+    }
 
     [HttpPost("{id:guid}/claim")]
     public async Task<IActionResult> Claim(Guid id)

@@ -16,7 +16,7 @@ public class TicketsControllerTests
     private static readonly Guid UserId = Guid.NewGuid();
     private readonly FakeTicketWorkflowService _workflow = new();
 
-    private static ClaimsPrincipal PrincipalFor(bool withUserId = true, string role = "Agent")
+    private static ClaimsPrincipal PrincipalFor(bool withUserId = true, string role = "Agent", bool withUpn = false)
     {
         var identity = new ClaimsIdentity("test");
         if (withUserId)
@@ -26,6 +26,11 @@ public class TicketsControllerTests
 
         identity.AddClaim(new Claim(ClaimTypes.Role, role));
         identity.AddClaim(new Claim("preferred_username", "alice@example.com"));
+        if (withUpn)
+        {
+            identity.AddClaim(new Claim(ClaimTypes.Upn, "upn@example.com"));
+        }
+
         return new ClaimsPrincipal(identity);
     }
 
@@ -94,6 +99,65 @@ public class TicketsControllerTests
 
         Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
         Assert.Null(_workflow.LastAction);
+    }
+
+    [Theory]
+    [InlineData("1")]
+    [InlineData("2")]
+    [InlineData("99")]
+    [InlineData("queue,mine")]
+    public async Task List_NumericOrListFilter_IsABadRequest(string value)
+    {
+        var result = await Create().List(value);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Null(_workflow.LastAction);
+    }
+
+    [Fact]
+    public async Task Caller_EmailPrefersUpnOverPreferredUsername()
+    {
+        await Create(PrincipalFor(withUpn: true)).List(null);
+
+        Assert.Equal("upn@example.com", _workflow.LastCaller!.Email);
+    }
+
+    [Fact]
+    public async Task Get_MissingUserIdClaim_IsForbiddenAndNothingRuns()
+    {
+        var result = await Create(PrincipalFor(withUserId: false)).Get(Guid.NewGuid());
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Null(_workflow.LastAction);
+    }
+
+    [Fact]
+    public async Task Release_MissingUserIdClaim_IsForbiddenAndNothingRuns()
+    {
+        var result = await Create(PrincipalFor(withUserId: false)).Release(Guid.NewGuid());
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Null(_workflow.LastAction);
+    }
+
+    [Fact]
+    public async Task Reply_MissingUserIdClaim_IsForbiddenAndNothingRuns()
+    {
+        var result = await Create(PrincipalFor(withUserId: false))
+            .Reply(Guid.NewGuid(), new ReplyRequest("Hi"), CancellationToken.None);
+
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<ObjectResult>(result).StatusCode);
+        Assert.Null(_workflow.LastAction);
+    }
+
+    [Fact]
+    public async Task Claim_Conflict_MapsTo409()
+    {
+        _workflow.DetailResult = TicketResult<TicketDetail>.Fail(TicketOutcome.Conflict, "taken");
+
+        var result = await Create().Claim(Guid.NewGuid());
+
+        Assert.Equal(StatusCodes.Status409Conflict, Assert.IsAssignableFrom<ObjectResult>(result).StatusCode);
     }
 
     [Theory]
