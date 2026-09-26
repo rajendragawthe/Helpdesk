@@ -18,7 +18,9 @@ public record TicketListItem(
     TicketAssignee? Assignee,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    bool HasDraft);
+    bool HasDraft,
+    int ReviewReasons,
+    bool NeedsReview);
 
 public record TicketMessageDto(Guid Id, string Sender, bool IsFromUser, DateTimeOffset ReceivedAt, string BodyText);
 
@@ -34,6 +36,8 @@ public record TicketDetail(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     bool HasDraft,
+    int ReviewReasons,
+    bool NeedsReview,
     string? DraftReply,
     IReadOnlyList<TicketMessageDto> Messages);
 

@@ -93,6 +93,26 @@ public class TicketWorkflowServiceTests
     // ---- List ----
 
     [Fact]
+    public async Task ListAndDetail_ExposeTheReviewFlagsAsIntAndNeedsReview()
+    {
+        var flagged = AddTicket(assignedTo: _alice);
+        flagged.ReviewReasons = ReviewReasons.LowConfidence | ReviewReasons.DraftFailed;
+        var clean = AddTicket(assignedTo: _alice);
+
+        var rows = (await Create().ListAsync(AliceCaller, TicketFilter.Mine)).Value!;
+        var flaggedRow = rows.Single(r => r.Id == flagged.Id);
+        var cleanRow = rows.Single(r => r.Id == clean.Id);
+        var detail = (await Create().GetAsync(flagged.Id)).Value!;
+
+        Assert.Equal(9, flaggedRow.ReviewReasons);
+        Assert.True(flaggedRow.NeedsReview);
+        Assert.Equal(0, cleanRow.ReviewReasons);
+        Assert.False(cleanRow.NeedsReview);
+        Assert.Equal(9, detail.ReviewReasons);
+        Assert.True(detail.NeedsReview);
+    }
+
+    [Fact]
     public async Task ListAsync_Queue_ShowsUnassignedAndMineButNotOthersOrReplied()
     {
         var unassigned = AddTicket();

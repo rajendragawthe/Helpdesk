@@ -19,6 +19,8 @@ export type TicketListItem = {
   createdAt: string
   updatedAt: string
   hasDraft: boolean
+  reviewReasons: number
+  needsReview: boolean
 }
 
 export type TicketMessage = {

@@ -44,7 +44,7 @@ public class TicketsControllerTests
 
     private static TicketDetail Detail() => new(
         Guid.NewGuid(), "s", "c@example.com", TicketStatus.InReview, null, null, null, null,
-        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false, null, []);
+        DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, false, 0, false, null, []);
 
     [Fact]
     public void Controller_RequiresTheAgentOnlyPolicy()

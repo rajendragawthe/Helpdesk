@@ -1,5 +1,6 @@
 using Helpdesk.Application.Classification;
 using Helpdesk.Core.Entities;
+using Helpdesk.Core.Enums;
 
 namespace Helpdesk.Application.Tickets;
 
@@ -16,7 +17,9 @@ internal static class TicketMapper
         ToAssignee(ticket),
         ticket.CreatedAt,
         ticket.UpdatedAt,
-        !string.IsNullOrWhiteSpace(ticket.DraftReply));
+        !string.IsNullOrWhiteSpace(ticket.DraftReply),
+        (int)ticket.ReviewReasons,
+        ticket.ReviewReasons != ReviewReasons.None);
 
     public static TicketDetail ToDetail(Ticket ticket) => new(
         ticket.Id,
@@ -30,6 +33,8 @@ internal static class TicketMapper
         ticket.CreatedAt,
         ticket.UpdatedAt,
         !string.IsNullOrWhiteSpace(ticket.DraftReply),
+        (int)ticket.ReviewReasons,
+        ticket.ReviewReasons != ReviewReasons.None,
         ticket.DraftReply,
         ticket.Messages.OrderBy(m => m.ReceivedAt).Select(ToMessage).ToList());
 
