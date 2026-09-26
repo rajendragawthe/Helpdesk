@@ -24,4 +24,20 @@ public class FakeMailClient : IMailClient
         MarkedAsProcessed.Add(externalMessageId);
         return Task.CompletedTask;
     }
+
+    public List<(string ReplyToExternalMessageId, string Text)> SentReplies { get; } = [];
+    public int SendAttempts { get; private set; }
+    public Exception? SendException { get; set; }
+
+    public Task SendReplyAsync(string replyToExternalMessageId, string plainTextBody, CancellationToken cancellationToken = default)
+    {
+        SendAttempts++;
+        if (SendException is not null)
+        {
+            throw SendException;
+        }
+
+        SentReplies.Add((replyToExternalMessageId, plainTextBody));
+        return Task.CompletedTask;
+    }
 }

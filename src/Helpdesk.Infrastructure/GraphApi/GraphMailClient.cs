@@ -3,6 +3,7 @@ using Helpdesk.Core.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
+using Microsoft.Graph.Users.Item.Messages.Item.Reply;
 
 namespace Helpdesk.Infrastructure.GraphApi;
 
@@ -49,5 +50,13 @@ public class GraphMailClient(GraphServiceClient graphClient, GraphApiOptions opt
         await graphClient.Users[options.MailboxAddress]
             .Messages[externalMessageId]
             .PatchAsync(new Message { IsRead = true }, cancellationToken: cancellationToken);
+    }
+
+    public async Task SendReplyAsync(string replyToExternalMessageId, string plainTextBody, CancellationToken cancellationToken = default)
+    {
+        await graphClient.Users[options.MailboxAddress]
+            .Messages[replyToExternalMessageId]
+            .Reply
+            .PostAsync(new ReplyPostRequestBody { Comment = plainTextBody }, cancellationToken: cancellationToken);
     }
 }
