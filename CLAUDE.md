@@ -9,6 +9,16 @@ AI-assisted support ticket system (MVP stage). Full context lives in three docs 
 - `tech-stack.md` — stack rationale and intended solution/project layout
 - `implementation-plan.md` — phased task breakdown (Phase 0 scaffolding is done; work proceeds phase by phase)
 
+## Development workflow (required)
+
+All implementation work — every new phase, feature, or non-trivial fix — follows the superpowers flow, in this order, without waiting to be asked:
+1. `superpowers:brainstorming` — produces the design spec in `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` (Phases 1 and 4 have one). Do not skip this step; a plan without a spec is incomplete.
+2. `superpowers:writing-plans` — saves the task plan to `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`, with the spec linked in its header.
+3. `superpowers:subagent-driven-development` — execute the plan with a fresh subagent per task, a review after each task, and one whole-branch review at the end. Do not default to inline execution.
+4. `superpowers:finishing-a-development-branch` — verify tests, then let the user choose merge / PR / keep.
+
+Work happens on a branch or git worktree, never directly on `main`. Do not merge or push without being asked. Never put secrets (API keys, client secrets) in the chat, repo files or memory — the user sets them with `dotnet user-secrets`.
+
 ## Commands
 
 ### Database
