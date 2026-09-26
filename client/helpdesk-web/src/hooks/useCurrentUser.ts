@@ -3,6 +3,7 @@ import { useMsal } from '@azure/msal-react'
 import { apiFetch } from '../api/apiFetch'
 
 export type CurrentUser = {
+  id: string | null
   name: string | null
   email: string | null
   roles: string[]

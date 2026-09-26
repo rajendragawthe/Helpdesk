@@ -15,6 +15,9 @@ function NavBar({ isAdmin }: NavBarProps) {
     <nav className="flex items-center justify-between border-b border-border px-8 py-4">
       <div className="flex items-center gap-6">
         <span className="font-heading text-xl font-semibold text-text-h">Helpdesk</span>
+        <Link to="/tickets" className="text-[15px] text-text hover:text-text-h">
+          Tickets
+        </Link>
         {isAdmin && (
           <Link to="/admin/users" className="text-[15px] text-text hover:text-text-h">
             Manage Agents
