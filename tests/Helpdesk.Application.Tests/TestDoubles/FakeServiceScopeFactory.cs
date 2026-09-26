@@ -23,11 +23,16 @@ public class FakeServiceScopeFactory(
 {
     public int ScopesCreated { get; private set; }
 
+    /// <summary>Records (service type, 1-based index of the scope it was resolved from) for AI services.</summary>
+    public List<(Type ServiceType, int ScopeIndex)> AiServiceResolutions { get; } = [];
+
     public IServiceScope CreateScope()
     {
         ScopesCreated++;
+        var scopeIndex = ScopesCreated;
         return new FakeServiceScope(new FakeServiceProvider(
-            ticketRepository, messageRepository, classificationService, draftReplyService));
+            ticketRepository, messageRepository, classificationService, draftReplyService,
+            serviceType => AiServiceResolutions.Add((serviceType, scopeIndex))));
     }
 
     private sealed class FakeServiceScope(IServiceProvider serviceProvider) : IServiceScope
@@ -43,7 +48,8 @@ public class FakeServiceScopeFactory(
         ITicketRepository ticketRepository,
         IMessageRepository messageRepository,
         IClassificationService? classificationService,
-        IDraftReplyService? draftReplyService)
+        IDraftReplyService? draftReplyService,
+        Action<Type> onAiServiceResolved)
         : IServiceProvider
     {
         public object? GetService(Type serviceType)
@@ -60,11 +66,13 @@ public class FakeServiceScopeFactory(
 
             if (serviceType == typeof(IClassificationService))
             {
+                onAiServiceResolved(serviceType);
                 return classificationService;
             }
 
             if (serviceType == typeof(IDraftReplyService))
             {
+                onAiServiceResolved(serviceType);
                 return draftReplyService;
             }
 

@@ -1,3 +1,5 @@
+using Helpdesk.Application.Classification;
+using Helpdesk.Application.DraftReply;
 using Helpdesk.Application.EmailIngestion;
 using Helpdesk.Application.Tests.TestDoubles;
 using Helpdesk.Core.Entities;
@@ -199,9 +201,10 @@ public class EmailIngestionServiceTests
 
         await service.IngestNewEmailsAsync();
 
-        // Exactly two scopes were created - one per message - proving no two messages
+        // Three scopes: one per message (the poisoned first message throws before drafting), plus
+        // the second message's separate drafting scope for its new ticket - proving no two messages
         // in this tick shared a scope (and therefore, in production, no shared DbContext).
-        Assert.Equal(2, scopeFactory.ScopesCreated);
+        Assert.Equal(3, scopeFactory.ScopesCreated);
 
         var secondTicket = Assert.Single(ticketRepository.Tickets, t => t.ConversationId == "conv-second");
         var secondMessage = Assert.Single(messageRepository.Messages);
@@ -316,6 +319,27 @@ public class EmailIngestionServiceTests
         var ticket = Assert.Single(ticketRepository.Tickets);
         Assert.Equal(ticket.Id, Assert.Single(drafter.DraftedTicketIds));
         Assert.Equal(1, drafter.ClassifiedCountAtDraftTime);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NewConversation_DraftsInDifferentScopeThanClassification()
+    {
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService(classifier);
+        var scopeFactory = new FakeServiceScopeFactory(
+            new FakeTicketRepository(), new FakeMessageRepository(), classifier, drafter);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-1", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        // Message scope + a separate draft scope, so a failed classification save cannot poison drafting.
+        Assert.Equal(2, scopeFactory.ScopesCreated);
+        var classifierScope = Assert.Single(
+            scopeFactory.AiServiceResolutions, r => r.ServiceType == typeof(IClassificationService)).ScopeIndex;
+        var drafterScope = Assert.Single(
+            scopeFactory.AiServiceResolutions, r => r.ServiceType == typeof(IDraftReplyService)).ScopeIndex;
+        Assert.NotEqual(classifierScope, drafterScope);
     }
 
     [Fact]

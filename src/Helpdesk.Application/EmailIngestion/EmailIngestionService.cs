@@ -44,7 +44,10 @@ public class EmailIngestionService(
                 // Only a brand-new ticket is classified and drafted (never a reply appended to an
                 // existing conversation). Both services are optional: they are only registered when
                 // OpenRouter is configured, so ingestion keeps working without AI. Drafting runs after
-                // classification so the drafter can use the stored category.
+                // classification so the drafter can use the stored category. The drafter gets its own
+                // fresh scope (and DbContext) so a failed classification save, whose Added entity would
+                // stay tracked and be retried, cannot poison the drafter's change tracker: the two fail
+                // independently.
                 if (newTicketId is { } ticketId)
                 {
                     if (scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
@@ -52,7 +55,8 @@ public class EmailIngestionService(
                         await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
                     }
 
-                    if (scope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
+                    using var draftScope = scopeFactory.CreateScope();
+                    if (draftScope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
                     {
                         await drafter.DraftReplyAsync(ticketId, cancellationToken);
                     }

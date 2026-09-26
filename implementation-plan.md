@@ -43,7 +43,7 @@
 30. Manual test: send a test email to the mailbox, confirm a ticket is created — done, verified 2026-09-21 against `epm1@prosaressolutions.onmicrosoft.com` (7 real unread emails ingested into 7 tickets/messages, correctly marked read afterward, zero errors on the following poll). Reply-threading half of this test (reply to an email, confirm it appends to the same ticket) was deliberately deferred rather than run in this session — the code path is implemented and covered by `EmailIngestionServiceTests`, but has not been exercised against a real Graph reply. Recommended before relying on this in production.
 
 ## Phase 5 — AI Classification & Summary — done (manual test pending)
-31. Define `IAiService` interface in `Helpdesk.Core/Interfaces` — done. Deviation: `SummarizeAsync` was folded into `ClassifyAsync` (one call returns category + summary + confidence); `DraftReplyAsync` is deferred to Phase 6.
+31. Define `IAiService` interface in `Helpdesk.Core/Interfaces` — done. Deviation: `SummarizeAsync` was folded into `ClassifyAsync` (one call returns category + summary + confidence); `DraftReplyAsync` was added in Phase 6.
 32. Implement OpenRouter HTTP client in `Helpdesk.Infrastructure/Ai` — done (`OpenRouterAiService`, JSON-mode output, opt-in DI registration)
 33. Implement `ClassificationService` in `Helpdesk.Application`: calls AI on new ticket, stores category + summary on `Classification` — done (`Helpdesk.Application/Classification`, strips HTML body to plain text first)
 34. Hook classification into the ingestion pipeline (runs right after ticket creation) — done (`EmailIngestionService` classifies newly created tickets only; failures are logged and never fail ingestion)

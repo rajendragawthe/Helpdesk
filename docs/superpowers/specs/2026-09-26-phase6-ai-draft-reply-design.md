@@ -1,9 +1,9 @@
 # Phase 6 — AI Draft Reply (Hardcoded KB) — Design
 
 Date: 2026-09-26
-Status: Approved in brainstorming (chat); awaiting written-spec review
+Status: Approved (design in brainstorming; written spec reviewed)
 Covers: `implementation-plan.md` Phase 6, tasks 36–39
-Plan: `docs/superpowers/plans/2026-09-26-phase6-ai-draft-reply.md` (to be written)
+Plan: `docs/superpowers/plans/2026-09-26-phase6-ai-draft-reply.md`
 
 ## Goal
 
