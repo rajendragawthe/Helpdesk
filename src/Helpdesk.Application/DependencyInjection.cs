@@ -1,4 +1,5 @@
 using Helpdesk.Application.Classification;
+using Helpdesk.Application.DraftReply;
 using Helpdesk.Application.EmailIngestion;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,12 +30,14 @@ public static class DependencyInjection
             services.AddHostedService<EmailIngestionBackgroundService>();
         }
 
-        // ClassificationService needs IAiService, which Infrastructure only registers when the
+        // ClassificationService and DraftReplyService need IAiService, which Infrastructure only registers when the
         // "OpenRouter" section is present and enabled. Same ValidateOnBuild reasoning as above, so
         // the presence check is duplicated here rather than registering unconditionally.
+        // DraftReplyService additionally needs IKnowledgeBase, which Infrastructure registers unconditionally (AddKnowledgeBase).
         if (IsOpenRouterConfigured(configuration))
         {
             services.AddScoped<IClassificationService, ClassificationService>();
+            services.AddScoped<IDraftReplyService, DraftReplyService>();
         }
 
         return services;

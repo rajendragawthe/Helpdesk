@@ -28,8 +28,15 @@ public class FakeTicketRepository : ITicketRepository
         return Task.CompletedTask;
     }
 
+    public Exception? UpdateException { get; set; }
+
     public Task UpdateAsync(Ticket ticket)
     {
+        if (UpdateException is not null)
+        {
+            throw UpdateException;
+        }
+
         return Task.CompletedTask;
     }
 }
