@@ -6,7 +6,7 @@ import LandingPage from './pages/LandingPage'
 import HomePage from './pages/HomePage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import QueuePage from './pages/QueuePage'
-import TicketDetailPage from './pages/TicketDetailPage'
+import TicketDetailPage from './pages/TicketDetail'
 import { useCurrentUser } from './hooks/useCurrentUser'
 
 function App() {

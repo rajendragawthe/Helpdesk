@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useMsal } from '@azure/msal-react'
 import { format } from 'date-fns'
 import { apiFetch } from '../api/apiFetch'
-import { errorMessage, type TicketDetail } from '../api/tickets'
+import { errorMessage, type TicketDetail as TicketDetailData } from '../api/tickets'
 import type { CurrentUser } from '../hooks/useCurrentUser'
 import MessageBody from '../components/MessageBody'
+import { useTickets } from '../context/TicketsProvider'
+import { ReviewBadge, StatusBadge } from '../components/StatusBadge'
+import { parseFilter } from '../lib/ticketLogic'
+import { ListSkeleton } from '../components/EmptyState'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 
-type TicketDetailPageProps = {
+type TicketDetailProps = {
   user: CurrentUser | null
   isAdmin: boolean
 }
@@ -22,15 +26,18 @@ function formatDate(value: string): string {
   return Number.isNaN(date.getTime()) ? '—' : format(date, 'PPp')
 }
 
-function TicketDetailPage({ user, isAdmin }: TicketDetailPageProps) {
+function TicketDetail({ user, isAdmin }: TicketDetailProps) {
   const { id } = useParams()
   // Keyed by id so every piece of state resets when the route param changes.
   return <TicketDetailContent key={id} id={id} user={user} isAdmin={isAdmin} />
 }
 
-function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id: string | undefined }) {
+function TicketDetailContent({ id, user, isAdmin }: TicketDetailProps & { id: string | undefined }) {
   const { instance } = useMsal()
-  const [ticket, setTicket] = useState<TicketDetail | null>(null)
+  const { refresh } = useTickets()
+  const [searchParams] = useSearchParams()
+  const backTo = `/tickets?filter=${parseFilter(searchParams.get('filter'), isAdmin)}`
+  const [ticket, setTicket] = useState<TicketDetailData | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -47,19 +54,19 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
   }, [])
 
   // Fetches the ticket detail; resolves to the data or an error message. Does not touch state itself.
-  const fetchTicket = useCallback(async (): Promise<{ data?: TicketDetail; error?: string }> => {
+  const fetchTicket = useCallback(async (): Promise<{ data?: TicketDetailData; error?: string }> => {
     try {
       const response = await apiFetch(instance, `/api/tickets/${id}`)
       if (!response.ok) {
         return { error: await errorMessage(response) }
       }
-      return { data: (await response.json()) as TicketDetail }
+      return { data: (await response.json()) as TicketDetailData }
     } catch (err) {
       return { error: err instanceof Error ? err.message : 'Unknown error' }
     }
   }, [instance, id])
 
-  const applyFetched = useCallback((result: { data?: TicketDetail; error?: string }) => {
+  const applyFetched = useCallback((result: { data?: TicketDetailData; error?: string }) => {
     if (!active.current) {
       return
     }
@@ -102,9 +109,9 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
         }
         return false
       }
-      let data: TicketDetail
+      let data: TicketDetailData
       try {
-        data = (await response.json()) as TicketDetail
+        data = (await response.json()) as TicketDetailData
       } catch {
         if (active.current) {
           setActionError(
@@ -113,6 +120,8 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
         }
         return false
       }
+      // Lists (rail badge, queue rows, dashboard) must reflect the claim/release/send; the detail keeps its own state.
+      void refresh()
       if (!active.current) {
         return true
       }
@@ -152,19 +161,19 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
 
   if (loadError) {
     return (
-      <main className="mx-auto max-w-4xl px-8 py-8">
+      <div className="mx-auto max-w-3xl p-6 text-left">
         <Alert variant="destructive">
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
-        <Link to="/tickets" className="mt-4 inline-block text-sm hover:underline">
+        <Link to={backTo} className="mt-4 inline-block text-sm hover:underline">
           ← Back to tickets
         </Link>
-      </main>
+      </div>
     )
   }
 
   if (!ticket) {
-    return <main role="status" className="mx-auto max-w-4xl px-8 py-8 text-sm text-muted-foreground">Loading…</main>
+    return <ListSkeleton rows={3} />
   }
 
   const isAssignee = ticket.assignee !== null && ticket.assignee.id === user?.id
@@ -173,8 +182,8 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
   const canClaim = ticket.assignee === null
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-8 py-8">
-      <Link to="/tickets" className="text-sm hover:underline">
+    <article className="mx-auto flex max-w-3xl flex-col gap-6 p-6 text-left">
+      <Link to={backTo} className="text-sm hover:underline lg:hidden">
         ← Back to tickets
       </Link>
 
@@ -182,7 +191,8 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
         <h1 className="font-heading text-2xl font-semibold text-text-h">{ticket.subject}</h1>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <span>{ticket.requesterEmail}</span>
-          <Badge>{ticket.status}</Badge>
+          <StatusBadge status={ticket.status} />
+          {ticket.needsReview && <ReviewBadge />}
           {ticket.category && <Badge variant="outline">{ticket.category}</Badge>}
         </div>
       </header>
@@ -279,8 +289,8 @@ function TicketDetailContent({ id, user, isAdmin }: TicketDetailPageProps & { id
           </CardContent>
         </Card>
       </section>
-    </main>
+    </article>
   )
 }
 
-export default TicketDetailPage
+export default TicketDetail
