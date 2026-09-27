@@ -5,6 +5,7 @@ namespace Helpdesk.Application.Tests.TestDoubles;
 public class FakeDraftReplyService(FakeClassificationService? classifier = null) : IDraftReplyService
 {
     public List<Guid> DraftedTicketIds { get; } = [];
+    public List<Guid> RedraftedTicketIds { get; } = [];
     public Exception? ExceptionToThrow { get; set; }
 
     /// <summary>How many tickets the paired classifier had already classified when drafting was called.</summary>
@@ -14,6 +15,18 @@ public class FakeDraftReplyService(FakeClassificationService? classifier = null)
     {
         ClassifiedCountAtDraftTime = classifier?.ClassifiedTicketIds.Count ?? 0;
         DraftedTicketIds.Add(ticketId);
+
+        if (ExceptionToThrow is not null)
+        {
+            throw ExceptionToThrow;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task RedraftReplyAsync(Guid ticketId, CancellationToken cancellationToken = default)
+    {
+        RedraftedTicketIds.Add(ticketId);
 
         if (ExceptionToThrow is not null)
         {

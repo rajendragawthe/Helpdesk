@@ -210,4 +210,116 @@ public class DraftReplyServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => CreateService().DraftReplyAsync(ticket.Id, cts.Token));
     }
+
+    [Fact]
+    public async Task RedraftReplyAsync_BuildsTranscriptFromFullThreadAndSetsInReview()
+    {
+        var ticket = AddTicket(
+            "Billing",
+            UserMessage("<p>I was charged twice</p>", DateTimeOffset.UtcNow.AddHours(-2)));
+        ticket.Messages.Add(new Message
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Sender = "agent@example.com",
+            Body = "We refunded the extra charge.",
+            IsFromUser = false,
+            ReceivedAt = DateTimeOffset.UtcNow.AddHours(-1),
+        });
+        ticket.Messages.Add(new Message
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Sender = "a@example.com",
+            Body = "<p>It happened again today</p>",
+            IsFromUser = true,
+            ReceivedAt = DateTimeOffset.UtcNow,
+        });
+        ticket.DraftReply = "stale draft from before";
+        ticket.Status = TicketStatus.Replied;
+        _ai.DraftResult = "Sorry about that, we're investigating.";
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        var call = Assert.Single(_ai.DraftCalls);
+        Assert.Contains("I was charged twice", call.Body);
+        Assert.Contains("We refunded the extra charge.", call.Body);
+        Assert.Contains("It happened again today", call.Body);
+        Assert.Contains("[Customer", call.Body);
+        Assert.Contains("[Agent", call.Body);
+        Assert.Equal("Sorry about that, we're investigating.", ticket.DraftReply);
+        Assert.Equal(TicketStatus.InReview, ticket.Status);
+    }
+
+    [Fact]
+    public async Task RedraftReplyAsync_NotGuardedByExistingDraft()
+    {
+        var ticket = AddTicket("Billing", OneMessage());
+        ticket.DraftReply = "old draft";
+        _ai.DraftResult = "new draft";
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        Assert.Single(_ai.DraftCalls);
+        Assert.Equal("new draft", ticket.DraftReply);
+    }
+
+    [Fact]
+    public async Task RedraftReplyAsync_AiThrows_ClearsStaleDraftAndStillSetsInReview()
+    {
+        var ticket = AddTicket("Billing", OneMessage());
+        ticket.DraftReply = "stale draft";
+        ticket.Status = TicketStatus.Replied;
+        _ai.DraftExceptionToThrow = new HttpRequestException("boom");
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        Assert.Null(ticket.DraftReply);
+        Assert.Equal(TicketStatus.InReview, ticket.Status);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   \n ")]
+    public async Task RedraftReplyAsync_BlankDraft_ClearsStaleDraft(string blank)
+    {
+        var ticket = AddTicket("Billing", OneMessage());
+        ticket.DraftReply = "stale draft";
+        _ai.DraftResult = blank;
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        Assert.Null(ticket.DraftReply);
+        Assert.Equal(TicketStatus.InReview, ticket.Status);
+    }
+
+    [Fact]
+    public async Task RedraftReplyAsync_TicketNotFound_DoesNothing()
+    {
+        await CreateService().RedraftReplyAsync(Guid.NewGuid());
+
+        Assert.Empty(_ai.DraftCalls);
+    }
+
+    [Fact]
+    public async Task RedraftReplyAsync_NoMessages_DoesNothing()
+    {
+        var ticket = AddTicket("Billing");
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        Assert.Empty(_ai.DraftCalls);
+    }
+
+    [Fact]
+    public async Task RedraftReplyAsync_Cancelled_PropagatesCancellation()
+    {
+        var ticket = AddTicket("Billing", OneMessage());
+        _ai.DraftExceptionToThrow = new OperationCanceledException();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => CreateService().RedraftReplyAsync(ticket.Id, cts.Token));
+    }
 }

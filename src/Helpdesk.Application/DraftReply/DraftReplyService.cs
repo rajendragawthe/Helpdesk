@@ -62,4 +62,60 @@ public class DraftReplyService(
             logger.LogError(ex, "Failed to draft a reply for ticket {TicketId}; leaving it without a draft.", ticketId);
         }
     }
+
+    public async Task RedraftReplyAsync(Guid ticketId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var ticket = await ticketRepository.GetByIdAsync(ticketId);
+            if (ticket is null)
+            {
+                logger.LogWarning("Cannot redraft a reply for ticket {TicketId}: not found.", ticketId);
+                return;
+            }
+
+            if (ticket.Messages.Count == 0)
+            {
+                logger.LogWarning("Cannot redraft a reply for ticket {TicketId}: it has no messages.", ticketId);
+                return;
+            }
+
+            var transcript = ThreadTranscript.Build(ticket.Messages);
+            var category = ticket.Classification?.Category;
+            var articles = KbMatcher.Match(ticket.Subject, transcript, category, knowledgeBase.GetAll());
+
+            string? draft;
+            try
+            {
+                draft = await aiService.DraftReplyAsync(ticket.Subject, transcript, category, articles, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to redraft a reply for ticket {TicketId} via AI; clearing the stale draft.", ticketId);
+                draft = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(draft))
+            {
+                logger.LogWarning("Redrafting ticket {TicketId} produced no usable draft; clearing the stale draft.", ticketId);
+            }
+
+            ticket.DraftReply = string.IsNullOrWhiteSpace(draft) ? null : draft.Trim();
+            ticket.Status = TicketStatus.InReview;
+            ticket.UpdatedAt = DateTimeOffset.UtcNow;
+            await ticketRepository.UpdateAsync(ticket);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to redraft a reply for ticket {TicketId}.", ticketId);
+        }
+    }
 }
