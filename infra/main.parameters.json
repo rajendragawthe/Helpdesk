@@ -10,6 +10,8 @@
     "graphTenantId": { "value": "REPLACE_WITH_PROD_ENTRA_TENANT_ID" },
     "graphClientId": { "value": "REPLACE_WITH_PROD_GRAPH_APP_CLIENT_ID" },
     "graphMailboxAddress": { "value": "REPLACE_WITH_PROD_MAILBOX_ADDRESS" },
-    "openRouterModel": { "value": "openai/gpt-4o-mini" }
+    "openRouterModel": { "value": "openai/gpt-4o-mini" },
+    "deployerObjectId": { "value": "REPLACE_WITH_YOUR_ENTRA_OBJECT_ID" },
+    "ciPrincipalObjectId": { "value": "REPLACE_WITH_CI_SERVICE_PRINCIPAL_OBJECT_ID" }
   }
 }

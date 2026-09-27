@@ -1,5 +1,5 @@
 // infra/modules/staticwebapp.bicep
-@description('Azure region for the Static Web App. Static Web Apps only deploy to a subset of regions - see az staticwebapp environment for a current list if this fails.')
+@description('Azure region for the Static Web App. Must be a region Static Web Apps supports (e.g. westus2, centralus, eastus2, westeurope, eastasia) - main.bicep passes its separate staticWebAppLocation param here, not the resource group region.')
 param location string
 
 @description('Static Web App name.')
