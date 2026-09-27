@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "baseName": { "value": "helpdesk" },
+    "postgresAdminLogin": { "value": "helpdeskadmin" },
+    "azureAdTenantId": { "value": "REPLACE_WITH_PROD_ENTRA_TENANT_ID" },
+    "azureAdClientId": { "value": "REPLACE_WITH_PROD_API_APP_CLIENT_ID" },
+    "azureAdAudience": { "value": "api://REPLACE_WITH_PROD_API_APP_CLIENT_ID" },
+    "graphTenantId": { "value": "REPLACE_WITH_PROD_ENTRA_TENANT_ID" },
+    "graphClientId": { "value": "REPLACE_WITH_PROD_GRAPH_APP_CLIENT_ID" },
+    "graphMailboxAddress": { "value": "REPLACE_WITH_PROD_MAILBOX_ADDRESS" },
+    "openRouterModel": { "value": "openai/gpt-4o-mini" }
+  }
+}
