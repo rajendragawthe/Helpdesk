@@ -9,10 +9,18 @@ permissions:
   id-token: write
   contents: read
 
+# One production deploy at a time. A second push queues behind the first instead of cancelling
+# it, so a migration is never interrupted mid-flight and swaps never overlap.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+# Resource names come from GitHub repository variables (docs/deployment.md, one-time setup), so
+# they track main.bicep's baseName instead of being hardcoded here.
 env:
-  RESOURCE_GROUP: rg-helpdesk-prod
-  APP_SERVICE_NAME: helpdesk-api-prod
-  KEY_VAULT_NAME: helpdesk-kv-prod
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  APP_SERVICE_NAME: ${{ vars.AZURE_APP_SERVICE_NAME }}
+  KEY_VAULT_NAME: ${{ vars.AZURE_KEY_VAULT_NAME }}
 
 jobs:
   deploy-api:
@@ -23,6 +31,13 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      # Tests gate the deploy: a red suite stops the job before anything is published.
+      - name: Restore
+        run: dotnet restore Helpdesk.slnx
+
+      - name: Test
+        run: dotnet test Helpdesk.slnx --configuration Release
 
       - name: Publish API
         run: dotnet publish src/Helpdesk.Api/Helpdesk.Api.csproj -c Release -o ${{ github.workspace }}/publish
@@ -77,9 +92,12 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Build
         env:
-          VITE_API_BASE_URL: https://helpdesk-api-prod.azurewebsites.net
+          VITE_API_BASE_URL: https://${{ vars.AZURE_APP_SERVICE_NAME }}.azurewebsites.net
         run: npm run build
 
       - name: Deploy to Static Web Apps
