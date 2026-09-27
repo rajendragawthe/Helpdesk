@@ -11,9 +11,6 @@ import { msalConfig } from './authConfig.ts'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'
 import { reportClientError } from './lib/clientErrorReporter.ts'
 
-const msalInstance = new PublicClientApplication(msalConfig)
-await msalInstance.initialize()
-
 window.addEventListener('error', (event) => {
   reportClientError({ message: event.message, stack: event.error?.stack })
 })
@@ -25,6 +22,9 @@ window.addEventListener('unhandledrejection', (event) => {
     stack: reason instanceof Error ? reason.stack : undefined,
   })
 })
+
+const msalInstance = new PublicClientApplication(msalConfig)
+await msalInstance.initialize()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

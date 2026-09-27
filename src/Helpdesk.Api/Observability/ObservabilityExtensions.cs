@@ -9,15 +9,22 @@ namespace Helpdesk.Api.Observability;
 /// <summary>
 /// Instruments ASP.NET Core/HttpClient/Npgsql for tracing and metrics. Unlike GraphApi/OpenRouter,
 /// there is no failure mode from instrumenting with nowhere to send data, so this is always
-/// registered: it exports to the console when no "Otel:OtlpEndpoint" is configured, and adds an
-/// OTLP exporter on top when one is. A fresh clone therefore gets visible traces/metrics with zero
-/// config, and can be pointed at a real collector later with only a config change.
+/// registered. Exactly one exporter (or none) is attached per signal: an OTLP exporter when
+/// "Otel:OtlpEndpoint" is configured, otherwise a console exporter only when
+/// "Otel:ConsoleExporter" is explicitly set to true, otherwise no exporter at all (spans/metrics
+/// are still produced by the instrumentation above but go nowhere) - the console exporter is
+/// opt-in, not on by default, because it writes plain-text span/metric dumps to the same stdout
+/// stream as Serilog's structured JSON log lines and would defeat the "every console line is a
+/// JSON object" contract described in CLAUDE.md. A fresh clone therefore starts with zero console
+/// noise and can be pointed at a real collector, or have console output turned on for local
+/// debugging, with only a config change.
 /// </summary>
 public static class ObservabilityExtensions
 {
     public static IServiceCollection AddObservability(this IServiceCollection services, IConfiguration configuration)
     {
         var otlpEndpoint = configuration["Otel:OtlpEndpoint"];
+        var consoleExporterEnabled = configuration.GetValue<bool>("Otel:ConsoleExporter");
 
         var otel = services.AddOpenTelemetry()
             .ConfigureResource(resource => resource.AddService("Helpdesk.Api"));
@@ -39,7 +46,7 @@ public static class ObservabilityExtensions
             {
                 tracing.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
             }
-            else
+            else if (consoleExporterEnabled)
             {
                 tracing.AddConsoleExporter();
             }
@@ -54,7 +61,7 @@ public static class ObservabilityExtensions
             {
                 metrics.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
             }
-            else
+            else if (consoleExporterEnabled)
             {
                 metrics.AddConsoleExporter();
             }

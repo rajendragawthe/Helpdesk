@@ -3,11 +3,18 @@
  * not use apiFetch (which requires a signed-in MSAL account and throws otherwise) - a crash can
  * happen before sign-in, and reporting it must never itself throw or block the caller.
  */
+const MAX_MESSAGE_LENGTH = 2000
+const MAX_STACK_LENGTH = 8000
+
 export function reportClientError(error: { message: string; stack?: string }): void {
+  const message = error.message?.trim() ? error.message.slice(0, MAX_MESSAGE_LENGTH) : '(no message)'
+
   const body = {
-    message: error.message,
-    stack: error.stack,
-    url: window.location.href,
+    message,
+    stack: error.stack?.slice(0, MAX_STACK_LENGTH),
+    // Origin + pathname only: the full href can carry MSAL redirect params (code/client_info/state)
+    // in the hash, which can exceed the backend's 500-char limit and get silently dropped.
+    url: window.location.origin + window.location.pathname,
     userAgent: navigator.userAgent,
   }
 

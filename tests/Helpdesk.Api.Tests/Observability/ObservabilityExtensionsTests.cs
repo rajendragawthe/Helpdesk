@@ -14,7 +14,7 @@ public class ObservabilityExtensionsTests
             .Build();
 
     [Fact]
-    public void AddObservability_NoOtelSection_StartsWithConsoleExporterAndResolves()
+    public void AddObservability_NoOtelSection_RegistersNoExporterAndResolves()
     {
         var services = new ServiceCollection();
 
@@ -31,6 +31,18 @@ public class ObservabilityExtensionsTests
         var services = new ServiceCollection();
 
         services.AddObservability(Config(("Otel:OtlpEndpoint", "http://localhost:4317")));
+
+        using var provider = services.BuildServiceProvider();
+        Assert.NotNull(provider.GetService<TracerProvider>());
+        Assert.NotNull(provider.GetService<MeterProvider>());
+    }
+
+    [Fact]
+    public void AddObservability_ConsoleExporterExplicitlyEnabled_StillResolvesWithoutThrowing()
+    {
+        var services = new ServiceCollection();
+
+        services.AddObservability(Config(("Otel:ConsoleExporter", "true")));
 
         using var provider = services.BuildServiceProvider();
         Assert.NotNull(provider.GetService<TracerProvider>());
