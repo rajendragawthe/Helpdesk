@@ -138,4 +138,118 @@ public class ClassificationServiceTests
         await Assert.ThrowsAsync<OperationCanceledException>(
             () => CreateService().ClassifyTicketAsync(ticket.Id, cts.Token));
     }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_ExistingClassification_UpdatesInPlace()
+    {
+        var ticket = AddTicket(UserMessage("<p>original</p>", DateTimeOffset.UtcNow.AddHours(-1)));
+        ticket.Classification = new Helpdesk.Core.Entities.Classification
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Category = "Other",
+            Summary = "old summary",
+            Confidence = 0.5,
+        };
+        ticket.Messages.Add(new Message
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Sender = "a@example.com",
+            Body = "<p>a new billing question</p>",
+            IsFromUser = true,
+            ReceivedAt = DateTimeOffset.UtcNow,
+        });
+        var existingId = ticket.Classification.Id;
+        _ai.Result = new ClassificationResult("Billing", "New billing question.", 0.93);
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        Assert.Equal(existingId, ticket.Classification.Id);
+        Assert.Equal("Billing", ticket.Classification.Category);
+        Assert.Equal("New billing question.", ticket.Classification.Summary);
+        Assert.Equal(0.93, ticket.Classification.Confidence);
+        Assert.Empty(_classifications.Classifications);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_SendsSubjectAndPlainTextOfLatestUserMessageToAi()
+    {
+        var ticket = AddTicket(
+            UserMessage("<p>original question</p>", DateTimeOffset.UtcNow.AddHours(-1)),
+            UserMessage("<p>a <b>later</b> follow-up</p>", DateTimeOffset.UtcNow));
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        var call = Assert.Single(_ai.Calls);
+        Assert.Equal("Charged twice", call.Subject);
+        Assert.Equal("a later follow-up", call.Body);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_NoExistingClassification_CreatesOne()
+    {
+        var ticket = AddTicket(UserMessage("<p>hi</p>", DateTimeOffset.UtcNow));
+        _ai.Result = new ClassificationResult("General Inquiry", "A greeting.", 0.6);
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        var stored = Assert.Single(_classifications.Classifications);
+        Assert.Equal(ticket.Id, stored.TicketId);
+        Assert.Equal("General Inquiry", stored.Category);
+        Assert.Equal("A greeting.", stored.Summary);
+        Assert.Equal(0.6, stored.Confidence);
+        Assert.NotEqual(Guid.Empty, stored.Id);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_TicketNotFound_DoesNothing()
+    {
+        await CreateService().ReclassifyTicketAsync(Guid.NewGuid());
+
+        Assert.Empty(_ai.Calls);
+        Assert.Empty(_classifications.Classifications);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_NoUserMessage_DoesNothing()
+    {
+        var ticket = AddTicket();
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        Assert.Empty(_ai.Calls);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_AiThrows_LeavesExistingClassificationUnchanged()
+    {
+        var ticket = AddTicket(UserMessage("<p>hi</p>", DateTimeOffset.UtcNow));
+        ticket.Classification = new Helpdesk.Core.Entities.Classification
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Category = "Billing",
+            Summary = "kept",
+            Confidence = 0.8,
+        };
+        _ai.ExceptionToThrow = new HttpRequestException("boom");
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        Assert.Equal("Billing", ticket.Classification.Category);
+        Assert.Equal("kept", ticket.Classification.Summary);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_Cancelled_PropagatesCancellation()
+    {
+        var ticket = AddTicket(UserMessage("<p>hi</p>", DateTimeOffset.UtcNow));
+        _ai.ExceptionToThrow = new OperationCanceledException();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(
+            () => CreateService().ReclassifyTicketAsync(ticket.Id, cts.Token));
+    }
 }

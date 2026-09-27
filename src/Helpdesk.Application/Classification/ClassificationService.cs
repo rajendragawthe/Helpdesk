@@ -59,4 +59,73 @@ public class ClassificationService(
             logger.LogError(ex, "Failed to classify ticket {TicketId}; leaving it unclassified.", ticketId);
         }
     }
+
+    public async Task ReclassifyTicketAsync(Guid ticketId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var ticket = await ticketRepository.GetByIdAsync(ticketId);
+            if (ticket is null)
+            {
+                logger.LogWarning("Cannot reclassify ticket {TicketId}: not found.", ticketId);
+                return;
+            }
+
+            var latestMessage = ticket.Messages
+                .Where(m => m.IsFromUser)
+                .OrderByDescending(m => m.ReceivedAt)
+                .FirstOrDefault();
+            if (latestMessage is null)
+            {
+                logger.LogWarning("Cannot reclassify ticket {TicketId}: it has no customer message.", ticketId);
+                return;
+            }
+
+            Helpdesk.Core.Models.ClassificationResult result;
+            try
+            {
+                result = await aiService.ClassifyAsync(
+                    ticket.Subject,
+                    HtmlText.ToPlainText(latestMessage.Body),
+                    cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to reclassify ticket {TicketId}; leaving its previous classification unchanged.", ticketId);
+                return;
+            }
+
+            if (ticket.Classification is { } existing)
+            {
+                existing.Category = result.Category;
+                existing.Summary = result.Summary;
+                existing.Confidence = result.Confidence;
+                await ticketRepository.UpdateAsync(ticket);
+            }
+            else
+            {
+                await classificationRepository.AddAsync(new Helpdesk.Core.Entities.Classification
+                {
+                    Id = Guid.NewGuid(),
+                    TicketId = ticket.Id,
+                    Category = result.Category,
+                    Summary = result.Summary,
+                    Confidence = result.Confidence,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to reclassify ticket {TicketId}.", ticketId);
+        }
+    }
 }
