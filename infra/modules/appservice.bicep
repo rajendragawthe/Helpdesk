@@ -54,7 +54,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
 var appSettings = [
   { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
   { name: 'ConnectionStrings__DefaultConnection', value: keyVaultRef(keyVaultUri, postgresConnectionStringSecretName) }
-  { name: 'AzureAd__Instance', value: 'https://login.microsoftonline.com/' }
+  { name: 'AzureAd__Instance', value: environment().authentication.loginEndpoint }
   { name: 'AzureAd__TenantId', value: azureAdTenantId }
   { name: 'AzureAd__ClientId', value: azureAdClientId }
   { name: 'AzureAd__Audience', value: azureAdAudience }

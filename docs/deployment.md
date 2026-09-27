@@ -30,9 +30,11 @@ from step 9.
    like):
    - API sign-in app: redirect URI `https://<static-web-app-hostname>` (get the hostname after
      step 6 applies the Bicep template, or reserve the name first via `az staticwebapp create
-     --name helpdesk-web-prod --resource-group rg-helpdesk-prod --sku Standard` and read its
-     `defaultHostname` before running the full `main.bicep` apply, since Bicep will happily manage
-     an existing resource of the same name).
+     --name helpdesk-web-prod --resource-group rg-helpdesk-prod --sku Standard --location eastus2`
+     — the `--location` must be a Static Web Apps-supported region, matching `main.bicep`'s
+     `staticWebAppLocation` param (default `eastus2`, see step 1) — and read its `defaultHostname`
+     before running the full `main.bicep` apply, since Bicep will happily manage an existing
+     resource of the same name).
    - Graph mail app: application permissions `Mail.ReadWrite` + `Mail.Send`, admin consent granted,
      scoped to the **new production mailbox** (not the dev mailbox already used for testing).
 
@@ -56,16 +58,20 @@ from step 9.
    non-empty value is used as a principal ID and the deployment fails. Use `""` to skip either
    role assignment.
 
-6. **Apply the Bicep template:**
+6. **Apply the Bicep template.** Generate a strong password first and pass it via an environment
+   variable rather than typing it as a literal on the command line, since a literal argument is
+   written to your shell history:
    ```
+   read -s POSTGRES_ADMIN_PASSWORD   # or: $POSTGRES_ADMIN_PASSWORD = Read-Host -AsSecureString in PowerShell
    az deployment group create \
      --resource-group rg-helpdesk-prod \
      --template-file infra/main.bicep \
      --parameters infra/main.parameters.json \
-     --parameters postgresAdminPassword='<generate a strong password>'
+     --parameters postgresAdminPassword="$POSTGRES_ADMIN_PASSWORD"
    ```
-   Save the `postgresAdminPassword` you generated - Key Vault holds the connection string, not
-   Postgres's own admin credential record, so it isn't retrievable from Azure after this step.
+   Save the password you generated somewhere durable (a password manager) - Key Vault holds the
+   connection string, not Postgres's own admin credential record, so it isn't retrievable from
+   Azure after this step.
 
    This also wires `APPLICATIONINSIGHTS_CONNECTION_STRING` straight from the Application Insights
    resource into the App Service as a plain app setting (it isn't a credential), so there is no
@@ -202,3 +208,10 @@ running deploy to finish rather than cancelling it.
    test, run once against production. Also reload a deep link such as
    `https://<staticWebAppHostname>/tickets` to confirm the SPA navigation fallback
    (`client/helpdesk-web/public/staticwebapp.config.json`) serves the app instead of a 404.
+
+   The bootstrap admin `DbSeeder.cs` creates on an empty `Users` table is hardcoded to
+   `rajendra.gawthe@ProsaresSolutions.onmicrosoft.com` - the dev tenant. If production uses a
+   different Entra tenant, that account can't sign in: either edit `DbSeeder.cs`'s bootstrap admin
+   email/display name before this deploy (a code change, not a runbook step), or, after the first
+   deploy, insert an Admin row for the real prod account directly against the production database
+   before anyone attempts to sign in.

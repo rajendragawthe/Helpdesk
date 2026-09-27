@@ -1,6 +1,7 @@
 using Helpdesk.Api.Observability;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Trace;
 
 namespace Helpdesk.Api.Tests.Observability;
 
@@ -31,6 +32,7 @@ public class AzureMonitorExtensionsTests
             ("APPLICATIONINSIGHTS_CONNECTION_STRING", "InstrumentationKey=00000000-0000-0000-0000-000000000000")));
 
         Assert.True(result);
-        Assert.NotEmpty(services);
+        using var provider = services.BuildServiceProvider();
+        Assert.NotNull(provider.GetService<TracerProvider>());
     }
 }

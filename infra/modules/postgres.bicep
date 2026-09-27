@@ -20,7 +20,7 @@ param allowedOutboundIps array = []
 @description('Whether to enable zone-redundant HA. Off by default per the Phase 10 design (MVP traffic does not justify roughly doubling compute cost); flip to true here to enable it later without restructuring the module.')
 param enableHighAvailability bool = false
 
-resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-preview' = {
+resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2024-08-01' = {
   name: serverName
   location: location
   sku: {
@@ -44,12 +44,12 @@ resource postgresServer 'Microsoft.DBforPostgreSQL/flexibleServers@2023-06-01-pr
   }
 }
 
-resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-06-01-preview' = {
+resource database 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2024-08-01' = {
   parent: postgresServer
   name: databaseName
 }
 
-resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = {
+resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = {
   parent: postgresServer
   name: 'AllowAzureServices'
   properties: {
@@ -58,7 +58,7 @@ resource allowAzureServices 'Microsoft.DBforPostgreSQL/flexibleServers/firewallR
   }
 }
 
-resource outboundIpRules 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2023-06-01-preview' = [
+resource outboundIpRules 'Microsoft.DBforPostgreSQL/flexibleServers/firewallRules@2024-08-01' = [
   for (ip, i) in allowedOutboundIps: {
     parent: postgresServer
     name: 'AllowAppServiceOutbound${i}'
