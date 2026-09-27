@@ -33,3 +33,4 @@ e2e/blob-report/
 
 # Infrastructure
 infra/**/*.json
+!infra/main.parameters.json

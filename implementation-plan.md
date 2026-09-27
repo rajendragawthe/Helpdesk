@@ -85,6 +85,15 @@ Known follow-ups from the branch review (not blocking, not yet scheduled): the A
 53. Smoke-test full loop end-to-end with 5–10 real-style sample emails
 
 ## Phase 10 — Deployment
+
+**Infra/CI code: done.** `infra/` (Bicep: Key Vault, PostgreSQL Flexible Server, App Service +
+staging slot, Static Web App, Application Insights) and `.github/workflows/` (`ci.yml`,
+`deploy.yml`) are written and committed. Items 54-60 below require the user's own Azure
+subscription, Entra tenant, and mailbox access to execute - see `docs/deployment.md` for the exact
+runbook (one-time setup steps 1-10, then push to `main`, then the post-deploy verification
+checklist). Design: `docs/superpowers/specs/2026-09-27-phase10-deployment-design.md`; plan:
+`docs/superpowers/plans/2026-09-27-phase10-deployment.md`.
+
 54. Provision PostgreSQL (managed instance or container)
 55. Deploy API (App Service / container)
 56. Deploy frontend (static hosting / App Service)
