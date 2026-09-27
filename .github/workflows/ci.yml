@@ -20,6 +20,8 @@ jobs:
         run: dotnet build Helpdesk.slnx --no-restore --configuration Release
       - name: Test
         run: dotnet test Helpdesk.slnx --no-build --configuration Release
+      - name: Compile Bicep templates
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
 
   frontend:
     runs-on: ubuntu-latest
