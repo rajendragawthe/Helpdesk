@@ -33,6 +33,12 @@ public class EmailIngestionService(
 
         foreach (var email in emails)
         {
+            using var _ = logger.BeginScope(new Dictionary<string, object>
+            {
+                ["ExternalMessageId"] = email.ExternalMessageId,
+                ["ConversationId"] = email.ConversationId,
+            });
+
             try
             {
                 // Each message gets its own DI scope (and therefore its own HelpdeskDbContext),

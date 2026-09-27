@@ -35,6 +35,8 @@ public class TicketWorkflowService(
 
     public async Task<TicketResult<TicketDetail>> ClaimAsync(TicketCaller caller, Guid ticketId)
     {
+        using var _ = logger.BeginScope(new Dictionary<string, object> { ["TicketId"] = ticketId });
+
         var existing = await ticketRepository.GetDetailAsync(ticketId);
         if (existing is null)
         {
@@ -52,6 +54,8 @@ public class TicketWorkflowService(
 
     public async Task<TicketResult<TicketDetail>> ReleaseAsync(TicketCaller caller, Guid ticketId)
     {
+        using var _ = logger.BeginScope(new Dictionary<string, object> { ["TicketId"] = ticketId });
+
         var ticket = await ticketRepository.GetDetailAsync(ticketId);
         if (ticket is null)
         {
@@ -76,6 +80,8 @@ public class TicketWorkflowService(
     public async Task<TicketResult<TicketDetail>> SendReplyAsync(
         TicketCaller caller, Guid ticketId, string text, CancellationToken cancellationToken = default)
     {
+        using var _ = logger.BeginScope(new Dictionary<string, object> { ["TicketId"] = ticketId });
+
         var ticket = await ticketRepository.GetByIdAsync(ticketId);
         if (ticket is null)
         {
