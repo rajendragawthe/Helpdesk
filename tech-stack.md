@@ -3,9 +3,9 @@
 ## Frontend
 - **React + TypeScript**, bundled with **Vite**
 - SPA calling the backend Web API over HTTP
-- Routing: `react-router` (routed pages under `src/pages`)
+- Routing: `react-router` (routed pages under `src/pages`; nested layout routes under `src/layouts` — `AppShell` (icon rail) and `TicketsLayout` (master-detail queue) — added in the app-shell redesign)
 - Forms: `react-hook-form` + `zod` (`@hookform/resolvers`)
-- Styling: **Tailwind CSS v4** (`@tailwindcss/vite`)
+- Styling: **Tailwind CSS v4** (`@tailwindcss/vite`); theme (light/dark/system) via `ThemeProvider` in `src/components`, toggling a `dark` class on `<html>`
 - UI components: **shadcn/ui** (`new-york` style, blue theme, Lucide icons) — component source lives in `src/components/ui`; add more with `npx shadcn@3.8.5 add <component>` (pinned below `@latest`, see note)
 - Auth: MSAL for React (`@azure/msal-react`) for Entra SSO, calling the API with a bearer token
 
@@ -46,12 +46,17 @@ Helpdesk.slnx
 │   │
 │   └── Helpdesk.Application/         # Use-cases orchestrating Core + Infrastructure
 │       ├── DependencyInjection.cs    # AddApplication(IConfiguration) — registers app services + hosted services
-│       └── EmailIngestion/           # EmailIngestionService (mapping/threading/dedupe) + EmailIngestionBackgroundService (poller)
+│       ├── EmailIngestion/           # EmailIngestionService (mapping/threading/dedupe) + EmailIngestionBackgroundService (poller)
+│       ├── Classification/           # ClassificationService (Phase 5)
+│       ├── DraftReply/               # DraftReplyService + KbMatcher (Phase 6)
+│       ├── Review/                   # ReviewPolicy + ReviewFlagService (Phase 8)
+│       └── Tickets/                  # TicketWorkflowService — claim/release/reply orchestration (Phase 7)
 │
 ├── tests/
 │   ├── Helpdesk.Core.Tests/
 │   ├── Helpdesk.Application.Tests/   # Hand-written test doubles (no mocking library) for Application-layer logic
-│   └── Helpdesk.Infrastructure.Tests/
+│   ├── Helpdesk.Infrastructure.Tests/
+│   └── Helpdesk.Api.Tests/           # Controller, auth claims and validator tests
 │
 └── client/
     └── helpdesk-web/                 # React + TypeScript + Vite frontend

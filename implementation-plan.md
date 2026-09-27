@@ -59,14 +59,14 @@
 40. `TicketsController`: `GET /api/tickets` (queue), `GET /api/tickets/{id}` — done (`filter=queue|mine|all`; explicit claim/release added: `POST .../claim`, `POST .../release`; detail returns the plain-text thread, summary and draft)
 41. `PUT /api/tickets/{id}/reply` — done (assignee/Admin only; validates, sends via Graph, stores the outbound message, marks `Replied`)
 42. Implement outbound email send via Graph API — done (`IMailClient.SendReplyAsync`, Graph reply on the latest customer message, so it threads; deviation: replies to the message rather than using `conversationId`)
-43. Frontend: Queue page — done (`QueuePage`, `/tickets`, Queue/Mine/All tabs)
-44. Frontend: Ticket detail page — done (`TicketDetailPage`, `/tickets/:id`: thread, AI summary, claim/release, editable draft, Send)
-45. Manual test: full loop — done, verified 2026-09-27 (email in, queue, claim, edit draft, send, threaded reply received, follow-up send worked; see CLAUDE.md "Agent queue and reply"). Follow-ups from the test: show the customer's email as sandboxed HTML on the ticket page, and an app-shell/UI redesign. Phase 7b (reopen on customer reply, keep assignee, AI re-draft) is not started.
+43. Frontend: Queue page — done (`TicketsLayout`, `/tickets`, Queue/Mine/All tabs; app-shell redesign 2026-09-27 replaced the original `QueuePage`)
+44. Frontend: Ticket detail page — done (`TicketDetail`, `/tickets/:id`: thread, AI summary, claim/release, editable draft, Send; renamed from `TicketDetailPage` in the app-shell redesign)
+45. Manual test: full loop — done, verified 2026-09-27 (email in, queue, claim, edit draft, send, threaded reply received, follow-up send worked; see CLAUDE.md "Agent queue and reply"). Follow-ups from the test — showing the customer's email as sandboxed HTML, and an app-shell/UI redesign — are both done and merged. Phase 7b (reopen on customer reply, keep assignee, AI re-draft) is not started.
 
-## Phase 8 — Escalation Path (Low Confidence) — backend done and manually verified (queue badge pending)
+## Phase 8 — Escalation Path (Low Confidence) — done and manually verified
 46. Define confidence threshold — done, as a `Review:ConfidenceThreshold` setting (default 0.7) evaluated by `ReviewPolicy` rather than on the `IAiService.ClassifyAsync` response (`IAiService` is unchanged)
 47. If below threshold, classification fails, category is Other or the draft failed, tag the ticket for manual review — done (`Ticket.ReviewReasons` flags + `ReviewFlagService`, migration `AddTicketReviewReasons`); manual test done 2026-09-27: a clear billing email stayed at `ReviewReasons` 0 and a vague email (confidence 0.55) got `ReviewReasons` 1 (LowConfidence) and still got a draft and `InReview` (see CLAUDE.md "Review flags")
-48. Frontend: visual indicator on queue for escalated/low-confidence tickets — pending (needs Phase 7's queue page and DTO)
+48. Frontend: visual indicator on queue for escalated/low-confidence tickets — done (review badge on list rows and ticket detail, plus a review dot on the Queue rail icon, added in the app-shell redesign)
 
 ## Phase 9 — Hardening & Polish
 49. Error handling: Graph API failures, AI API failures/timeouts (retry or fallback to "no draft available")

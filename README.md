@@ -34,7 +34,7 @@ cp .env.example .env
 npm install
 npm run dev
 ```
-Runs at `http://localhost:5173`.
+Runs at `http://localhost:5173`. `.env` is git-ignored — in a new worktree, copy it from an existing checkout (or fill it in) rather than expecting `git worktree add` to bring it along; without it, sign-in silently does nothing.
 
 ### AI classification and draft replies (optional)
 AI is opt-in like email ingestion: with no `OpenRouter` config (or `OpenRouter:Enabled=false`) the backend still starts and tickets simply stay unclassified and undrafted. To enable classification and draft replies, set `OpenRouter:ApiKey` with `dotnet user-secrets` and see `CLAUDE.md`'s "AI classification" and "AI draft reply" sections.
