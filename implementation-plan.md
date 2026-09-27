@@ -86,12 +86,17 @@ Known follow-ups from the branch review (not blocking, not yet scheduled): the A
 
 ## Phase 10 — Deployment
 
-**Infra/CI code: done.** `infra/` (Bicep: Key Vault, PostgreSQL Flexible Server, App Service +
-staging slot, Static Web App, Application Insights) and `.github/workflows/` (`ci.yml`,
-`deploy.yml`) are written and committed. Items 54-60 below require the user's own Azure
-subscription, Entra tenant, and mailbox access to execute - see `docs/deployment.md` for the exact
-runbook (one-time setup steps 1-10, then push to `main`, then the post-deploy verification
-checklist). Design: `docs/superpowers/specs/2026-09-27-phase10-deployment-design.md`; plan:
+**Infra/CI code: done.** `infra/` (Bicep: Key Vault with RBAC authorization, PostgreSQL Flexible
+Server, App Service + staging slot, Static Web App, Application Insights) and
+`.github/workflows/` (`ci.yml`, `deploy.yml`) are written, committed, and pushed. A final
+whole-branch review (dispatched with a real Bicep compiler) caught and fixed a Bicep syntax error,
+a staging-slot bug that would have run the email poller against the production mailbox from both
+slots at once, and a Key Vault access model that would have locked out both the runbook and the
+CD workflow — all resolved in one fix wave, re-verified, then merged. Items 54-60 below require
+the user's own Azure subscription, Entra tenant, and mailbox access to execute - see
+`docs/deployment.md` for the exact runbook (one-time setup steps 1-11, then push to `main`, then
+the post-deploy verification checklist). Design:
+`docs/superpowers/specs/2026-09-27-phase10-deployment-design.md`; plan:
 `docs/superpowers/plans/2026-09-27-phase10-deployment.md`.
 
 54. Provision PostgreSQL (managed instance or container)
