@@ -104,10 +104,8 @@ public class DraftReplyService(
                 logger.LogWarning("Redrafting ticket {TicketId} produced no usable draft; clearing the stale draft.", ticketId);
             }
 
-            ticket.DraftReply = string.IsNullOrWhiteSpace(draft) ? null : draft.Trim();
-            ticket.Status = TicketStatus.InReview;
-            ticket.UpdatedAt = DateTimeOffset.UtcNow;
-            await ticketRepository.UpdateAsync(ticket);
+            var draftToStore = string.IsNullOrWhiteSpace(draft) ? null : draft.Trim();
+            await ticketRepository.SetDraftAsync(ticket.Id, draftToStore, TicketStatus.InReview, DateTimeOffset.UtcNow);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

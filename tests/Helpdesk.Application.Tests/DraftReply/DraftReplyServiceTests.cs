@@ -294,6 +294,17 @@ public class DraftReplyServiceTests
     }
 
     [Fact]
+    public async Task RedraftReplyAsync_DoesNotCallWholeTicketUpdate()
+    {
+        var ticket = AddTicket("Billing", OneMessage());
+        _ai.DraftResult = "a fresh draft";
+
+        await CreateService().RedraftReplyAsync(ticket.Id);
+
+        Assert.Equal(0, _tickets.UpdateCount);
+    }
+
+    [Fact]
     public async Task RedraftReplyAsync_TicketNotFound_DoesNothing()
     {
         await CreateService().RedraftReplyAsync(Guid.NewGuid());

@@ -28,4 +28,11 @@ public interface ITicketRepository
 
     /// <summary>Stores the outbound reply message and marks the ticket Replied, in one save.</summary>
     Task RecordReplyAsync(Guid ticketId, Message reply);
+
+    /// <summary>
+    /// Updates only DraftReply, Status and UpdatedAt via a targeted UPDATE (no other columns touched —
+    /// notably not AssignedUserId), so a concurrent claim/release/reply made while an AI call was in
+    /// flight cannot be clobbered by a stale full-entity save.
+    /// </summary>
+    Task SetDraftAsync(Guid ticketId, string? draftReply, TicketStatus status, DateTimeOffset updatedAt);
 }

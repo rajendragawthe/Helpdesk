@@ -44,6 +44,24 @@ public class FakeTicketRepository : ITicketRepository
         return Task.CompletedTask;
     }
 
+    public Task SetDraftAsync(Guid ticketId, string? draftReply, TicketStatus status, DateTimeOffset updatedAt)
+    {
+        if (UpdateException is not null)
+        {
+            throw UpdateException;
+        }
+
+        var ticket = Tickets.FirstOrDefault(t => t.Id == ticketId);
+        if (ticket is not null)
+        {
+            ticket.DraftReply = draftReply;
+            ticket.Status = status;
+            ticket.UpdatedAt = updatedAt;
+        }
+
+        return Task.CompletedTask;
+    }
+
     /// <summary>Users the fake can resolve as assignees (mirrors the AssignedUser include of the real repository).</summary>
     public List<User> Users { get; } = [];
 

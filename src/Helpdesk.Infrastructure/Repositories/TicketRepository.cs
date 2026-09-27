@@ -94,6 +94,16 @@ public class TicketRepository(HelpdeskDbContext dbContext) : ITicketRepository
                 .SetProperty(t => t.UpdatedAt, now));
     }
 
+    public async Task SetDraftAsync(Guid ticketId, string? draftReply, TicketStatus status, DateTimeOffset updatedAt)
+    {
+        await dbContext.Tickets
+            .Where(t => t.Id == ticketId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(t => t.DraftReply, draftReply)
+                .SetProperty(t => t.Status, status)
+                .SetProperty(t => t.UpdatedAt, updatedAt));
+    }
+
     public async Task RecordReplyAsync(Guid ticketId, Message reply)
     {
         var ticket = await dbContext.Tickets.FirstAsync(t => t.Id == ticketId);

@@ -17,4 +17,22 @@ public class FakeClassificationRepository : IClassificationRepository
         Classifications.Add(classification);
         return Task.CompletedTask;
     }
+
+    public Task UpdateAsync(Guid classificationId, string category, string summary, double confidence)
+    {
+        if (ExceptionToThrow is not null)
+        {
+            throw ExceptionToThrow;
+        }
+
+        var classification = Classifications.FirstOrDefault(c => c.Id == classificationId);
+        if (classification is not null)
+        {
+            classification.Category = category;
+            classification.Summary = summary;
+            classification.Confidence = confidence;
+        }
+
+        return Task.CompletedTask;
+    }
 }

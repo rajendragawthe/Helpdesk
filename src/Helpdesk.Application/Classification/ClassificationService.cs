@@ -101,10 +101,7 @@ public class ClassificationService(
 
             if (ticket.Classification is { } existing)
             {
-                existing.Category = result.Category;
-                existing.Summary = result.Summary;
-                existing.Confidence = result.Confidence;
-                await ticketRepository.UpdateAsync(ticket);
+                await classificationRepository.UpdateAsync(existing.Id, result.Category, result.Summary, result.Confidence);
             }
             else
             {

@@ -161,6 +161,7 @@ public class ClassificationServiceTests
             ReceivedAt = DateTimeOffset.UtcNow,
         });
         var existingId = ticket.Classification.Id;
+        _classifications.Classifications.Add(ticket.Classification);
         _ai.Result = new ClassificationResult("Billing", "New billing question.", 0.93);
 
         await CreateService().ReclassifyTicketAsync(ticket.Id);
@@ -169,7 +170,27 @@ public class ClassificationServiceTests
         Assert.Equal("Billing", ticket.Classification.Category);
         Assert.Equal("New billing question.", ticket.Classification.Summary);
         Assert.Equal(0.93, ticket.Classification.Confidence);
-        Assert.Empty(_classifications.Classifications);
+        Assert.Single(_classifications.Classifications);
+    }
+
+    [Fact]
+    public async Task ReclassifyTicketAsync_ExistingClassification_DoesNotCallWholeTicketUpdate()
+    {
+        var ticket = AddTicket(UserMessage("<p>original</p>", DateTimeOffset.UtcNow.AddHours(-1)));
+        ticket.Classification = new Helpdesk.Core.Entities.Classification
+        {
+            Id = Guid.NewGuid(),
+            TicketId = ticket.Id,
+            Category = "Other",
+            Summary = "old summary",
+            Confidence = 0.5,
+        };
+        _classifications.Classifications.Add(ticket.Classification);
+        _ai.Result = new ClassificationResult("Billing", "New billing question.", 0.93);
+
+        await CreateService().ReclassifyTicketAsync(ticket.Id);
+
+        Assert.Equal(0, _tickets.UpdateCount);
     }
 
     [Fact]
