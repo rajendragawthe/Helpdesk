@@ -1,0 +1,92 @@
+# .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-helpdesk-prod
+  APP_SERVICE_NAME: helpdesk-api-prod
+  KEY_VAULT_NAME: helpdesk-kv-prod
+
+jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish API
+        run: dotnet publish src/Helpdesk.Api/Helpdesk.Api.csproj -c Release -o ${{ github.workspace }}/publish
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy to staging slot
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_SERVICE_NAME }}
+          slot-name: staging
+          package: ${{ github.workspace }}/publish
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.*
+
+      - name: Read production connection string from Key Vault
+        id: connstring
+        run: |
+          VALUE=$(az keyvault secret show --vault-name "${{ env.KEY_VAULT_NAME }}" --name "ConnectionStrings-DefaultConnection" --query value -o tsv)
+          echo "::add-mask::$VALUE"
+          echo "value=$VALUE" >> "$GITHUB_OUTPUT"
+
+      - name: Run EF Core migrations against production
+        env:
+          ConnectionStrings__DefaultConnection: ${{ steps.connstring.outputs.value }}
+        run: dotnet ef database update --project src/Helpdesk.Infrastructure --startup-project src/Helpdesk.Api
+
+      - name: Swap staging to production
+        if: success()
+        run: az webapp deployment slot swap --resource-group "${{ env.RESOURCE_GROUP }}" --name "${{ env.APP_SERVICE_NAME }}" --slot staging --target-slot production
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client/helpdesk-web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: client/helpdesk-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        env:
+          VITE_API_BASE_URL: https://helpdesk-api-prod.azurewebsites.net
+        run: npm run build
+
+      - name: Deploy to Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: client/helpdesk-web/dist
+          skip_app_build: true
