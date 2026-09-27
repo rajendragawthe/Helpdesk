@@ -39,6 +39,7 @@ builder.Services.AddOpenRouter(builder.Configuration);
 builder.Services.AddKnowledgeBase();
 builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddObservability(builder.Configuration);
+builder.Services.TryAddAzureMonitor(builder.Configuration);
 
 var corsConfigured = builder.Services.TryAddCors(builder.Configuration);
 
