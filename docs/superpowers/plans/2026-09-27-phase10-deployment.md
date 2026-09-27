@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-27-phase10-deployment-design.md`
 
+> **Errata (final whole-branch review fix pass).** Some code blocks below are superseded; the files under `infra/`, `.github/workflows/` and `docs/deployment.md` are authoritative. In particular: `var keyVaultRef = (secretName string) => ...` is not valid Bicep and was replaced by a file-scope `func keyVaultRef(vaultUri string, secretName string) string => ...`; Key Vault uses RBAC authorization (role assignments, not an access policy, so "Key Vault Secrets User" for the CI principal is now meaningful); the App Insights connection string is a plain app setting, not a Key Vault secret; the staging slot disables ingestion (`GraphApi__Enabled`/`OpenRouter__Enabled` = `false`, slot-sticky); production has `alwaysOn`; the Static Web App has its own `staticWebAppLocation`; `deploy.yml` is concurrency-guarded, test-gated and reads resource names from repository variables.
+
 ## Global Constraints
 
 - Cloud provider is Azure; IaC is Bicep under `infra/`, applied via `az deployment group create` — no Terraform, no manual portal-only resources.
