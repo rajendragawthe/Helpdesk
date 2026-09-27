@@ -15,6 +15,9 @@ public class EmailIngestionService(
     IServiceScopeFactory scopeFactory,
     ILogger<EmailIngestionService> logger)
 {
+    /// <summary>Result of processing one inbound email: which ticket it landed on, and which pipeline (if any) it needs.</summary>
+    private readonly record struct EmailProcessingResult(Guid TicketId, bool IsNewTicket, bool NeedsReopen);
+
     public async Task IngestNewEmailsAsync(CancellationToken cancellationToken = default)
     {
         IReadOnlyList<InboundEmailMessage> emails;
@@ -40,26 +43,30 @@ public class EmailIngestionService(
                 var ticketRepository = scope.ServiceProvider.GetRequiredService<ITicketRepository>();
                 var messageRepository = scope.ServiceProvider.GetRequiredService<IMessageRepository>();
 
-                var newTicketId = await ProcessEmailAsync(email, ticketRepository, messageRepository);
-
-                // Only a brand-new ticket is classified, drafted and review-flagged (never a reply appended to an
-                // existing conversation). These services are optional: they are only registered when
-                // OpenRouter is configured, so ingestion keeps working without AI. Drafting runs after
-                // classification so the drafter can use the stored category. The drafter gets its own
-                // fresh scope (and DbContext) so a failed classification save, whose Added entity would
-                // stay tracked and be retried, cannot poison the drafter's change tracker: the two fail
-                // independently.
-                if (newTicketId is { } ticketId)
+                var result = await ProcessEmailAsync(email, ticketRepository, messageRepository);
+                if (result is not { } processed)
                 {
+                    continue;
+                }
+
+                if (processed.IsNewTicket)
+                {
+                    // Only a brand-new ticket is classified, drafted and review-flagged this way (never a
+                    // reply appended to an existing conversation). These services are optional: they are
+                    // only registered when OpenRouter is configured, so ingestion keeps working without
+                    // AI. Drafting runs after classification so the drafter can use the stored category.
+                    // The drafter gets its own fresh scope (and DbContext) so a failed classification
+                    // save, whose Added entity would stay tracked and be retried, cannot poison the
+                    // drafter's change tracker: the two fail independently.
                     if (scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
                     {
-                        await classifier.ClassifyTicketAsync(ticketId, cancellationToken);
+                        await classifier.ClassifyTicketAsync(processed.TicketId, cancellationToken);
                     }
 
                     using var draftScope = scopeFactory.CreateScope();
                     if (draftScope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
                     {
-                        await drafter.DraftReplyAsync(ticketId, cancellationToken);
+                        await drafter.DraftReplyAsync(processed.TicketId, cancellationToken);
                     }
 
                     // Review flags are derived from what classification and drafting actually stored, so they
@@ -67,7 +74,31 @@ public class EmailIngestionService(
                     using var reviewScope = scopeFactory.CreateScope();
                     if (reviewScope.ServiceProvider.GetService<IReviewFlagService>() is { } reviewer)
                     {
-                        await reviewer.EvaluateAsync(ticketId, cancellationToken);
+                        await reviewer.EvaluateAsync(processed.TicketId, cancellationToken);
+                    }
+                }
+                else if (processed.NeedsReopen)
+                {
+                    // A customer reply reopened an InReview/Replied ticket (its status was already
+                    // flipped Replied -> InReview inside ProcessEmailAsync, unconditionally, so the
+                    // ticket reappears in the queue even if the AI calls below fail). Reclassify from
+                    // the latest message, then redraft from the full thread, then re-evaluate review
+                    // flags - same per-step scope isolation and AI-optional gating as the new-ticket path.
+                    if (scope.ServiceProvider.GetService<IClassificationService>() is { } classifier)
+                    {
+                        await classifier.ReclassifyTicketAsync(processed.TicketId, cancellationToken);
+                    }
+
+                    using var draftScope = scopeFactory.CreateScope();
+                    if (draftScope.ServiceProvider.GetService<IDraftReplyService>() is { } drafter)
+                    {
+                        await drafter.RedraftReplyAsync(processed.TicketId, cancellationToken);
+                    }
+
+                    using var reviewScope = scopeFactory.CreateScope();
+                    if (reviewScope.ServiceProvider.GetService<IReviewFlagService>() is { } reviewer)
+                    {
+                        await reviewer.EvaluateAsync(processed.TicketId, cancellationToken);
                     }
                 }
             }
@@ -86,7 +117,7 @@ public class EmailIngestionService(
         }
     }
 
-    private async Task<Guid?> ProcessEmailAsync(
+    private async Task<EmailProcessingResult?> ProcessEmailAsync(
         InboundEmailMessage email,
         ITicketRepository ticketRepository,
         IMessageRepository messageRepository)
@@ -97,8 +128,10 @@ public class EmailIngestionService(
             return null;
         }
 
-        Guid? newTicketId = null;
         var ticket = await ticketRepository.GetByConversationIdAsync(email.ConversationId);
+
+        bool isNewTicket;
+        bool needsReopen;
 
         if (ticket is null)
         {
@@ -113,10 +146,25 @@ public class EmailIngestionService(
                 UpdatedAt = email.ReceivedAt,
             };
             await ticketRepository.AddAsync(ticket);
-            newTicketId = ticket.Id;
+            isNewTicket = true;
+            needsReopen = false;
         }
         else
         {
+            isNewTicket = false;
+            // A reply is only "reopen-eligible" if the ticket had already gone through the
+            // first-message pipeline (InReview or Replied). A reply arriving while the ticket is
+            // still New (that pipeline mid-flight or previously failed) is left alone, matching
+            // today's behavior: the message is stored, nothing else happens.
+            needsReopen = ticket.Status is TicketStatus.InReview or TicketStatus.Replied;
+
+            // Applied unconditionally, independent of whether reclassify/redraft below succeed, so
+            // the ticket reliably reappears in the Queue/Mine views even on an AI failure.
+            if (ticket.Status == TicketStatus.Replied)
+            {
+                ticket.Status = TicketStatus.InReview;
+            }
+
             ticket.UpdatedAt = email.ReceivedAt;
             await ticketRepository.UpdateAsync(ticket);
         }
@@ -134,6 +182,6 @@ public class EmailIngestionService(
         await messageRepository.AddAsync(message);
 
         await mailClient.MarkAsProcessedAsync(email.ExternalMessageId);
-        return newTicketId;
+        return new EmailProcessingResult(ticket.Id, isNewTicket, needsReopen);
     }
 }

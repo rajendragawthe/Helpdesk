@@ -46,7 +46,7 @@ public class EmailIngestionServiceTests
     }
 
     [Fact]
-    public async Task IngestNewEmailsAsync_ExistingConversation_AppendsMessageAndLeavesStatusUnchanged()
+    public async Task IngestNewEmailsAsync_ExistingConversationWasReplied_ReopensToInReview()
     {
         var existingTicket = new Helpdesk.Core.Entities.Ticket
         {
@@ -55,9 +55,11 @@ public class EmailIngestionServiceTests
             RequesterEmail = "requester@example.com",
             Status = TicketStatus.Replied,
             ConversationId = "conv-1",
+            AssignedUserId = Guid.NewGuid(),
             CreatedAt = DateTimeOffset.UtcNow.AddDays(-1),
             UpdatedAt = DateTimeOffset.UtcNow.AddDays(-1),
         };
+        var assignedUserId = existingTicket.AssignedUserId;
 
         var reply = new InboundEmailMessage(
             ExternalMessageId: "msg-2",
@@ -77,7 +79,8 @@ public class EmailIngestionServiceTests
         await service.IngestNewEmailsAsync();
 
         Assert.Single(ticketRepository.Tickets);
-        Assert.Equal(TicketStatus.Replied, existingTicket.Status);
+        Assert.Equal(TicketStatus.InReview, existingTicket.Status);
+        Assert.Equal(assignedUserId, existingTicket.AssignedUserId);
 
         var message = Assert.Single(messageRepository.Messages);
         Assert.Equal(existingTicket.Id, message.TicketId);
@@ -510,5 +513,138 @@ public class EmailIngestionServiceTests
 
         Assert.Single(reviewer.ReviewedTicketIds);
         Assert.Equal(["msg-1"], mailClient.MarkedAsProcessed);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ReplyToRepliedTicket_ReclassifiesRedraftsAndReviews()
+    {
+        var existingTicket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Original subject",
+            RequesterEmail = "requester@example.com",
+            Status = TicketStatus.Replied,
+            ConversationId = "conv-1",
+        };
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(existingTicket);
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService();
+        var reviewer = new FakeReviewFlagService();
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), classifier, drafter, reviewer);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(existingTicket.Id, Assert.Single(classifier.ReclassifiedTicketIds));
+        Assert.Equal(existingTicket.Id, Assert.Single(drafter.RedraftedTicketIds));
+        Assert.Equal(existingTicket.Id, Assert.Single(reviewer.ReviewedTicketIds));
+        Assert.Empty(classifier.ClassifiedTicketIds);
+        Assert.Empty(drafter.DraftedTicketIds);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ReplyToInReviewTicket_StaysInReviewAndReopens()
+    {
+        var existingTicket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Original subject",
+            RequesterEmail = "requester@example.com",
+            Status = TicketStatus.InReview,
+            ConversationId = "conv-1",
+        };
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(existingTicket);
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService();
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), classifier, drafter);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(TicketStatus.InReview, existingTicket.Status);
+        Assert.Equal(existingTicket.Id, Assert.Single(classifier.ReclassifiedTicketIds));
+        Assert.Equal(existingTicket.Id, Assert.Single(drafter.RedraftedTicketIds));
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_ReplyToNewTicket_DoesNotReopen()
+    {
+        var existingTicket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Original subject",
+            RequesterEmail = "requester@example.com",
+            Status = TicketStatus.New,
+            ConversationId = "conv-1",
+        };
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(existingTicket);
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService();
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), classifier, drafter);
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(TicketStatus.New, existingTicket.Status);
+        Assert.Empty(classifier.ReclassifiedTicketIds);
+        Assert.Empty(drafter.RedraftedTicketIds);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_TwoRepliesInSameTick_SecondSeesReopenedThread()
+    {
+        var existingTicket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Original subject",
+            RequesterEmail = "requester@example.com",
+            Status = TicketStatus.Replied,
+            ConversationId = "conv-1",
+        };
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(existingTicket);
+        var classifier = new FakeClassificationService();
+        var drafter = new FakeDraftReplyService();
+        var mailClient = new FakeMailClient(Email("msg-2", "conv-1"), Email("msg-3", "conv-1"));
+        var scopeFactory = new FakeServiceScopeFactory(
+            ticketRepository, new FakeMessageRepository(), classifier, drafter);
+        var service = new EmailIngestionService(mailClient, scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(TicketStatus.InReview, existingTicket.Status);
+        Assert.Equal(2, classifier.ReclassifiedTicketIds.Count);
+        Assert.Equal(2, drafter.RedraftedTicketIds.Count);
+    }
+
+    [Fact]
+    public async Task IngestNewEmailsAsync_NoClassificationOrDraftServiceRegistered_ReopenStillFlipsStatus()
+    {
+        var existingTicket = new Ticket
+        {
+            Id = Guid.NewGuid(),
+            Subject = "Original subject",
+            RequesterEmail = "requester@example.com",
+            Status = TicketStatus.Replied,
+            ConversationId = "conv-1",
+        };
+        var ticketRepository = new FakeTicketRepository();
+        ticketRepository.Tickets.Add(existingTicket);
+        var scopeFactory = new FakeServiceScopeFactory(ticketRepository, new FakeMessageRepository());
+        var service = new EmailIngestionService(
+            new FakeMailClient(Email("msg-2", "conv-1")), scopeFactory, NullLogger<EmailIngestionService>.Instance);
+
+        await service.IngestNewEmailsAsync();
+
+        Assert.Equal(TicketStatus.InReview, existingTicket.Status);
     }
 }
