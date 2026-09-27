@@ -3,6 +3,8 @@
  * not use apiFetch (which requires a signed-in MSAL account and throws otherwise) - a crash can
  * happen before sign-in, and reporting it must never itself throw or block the caller.
  */
+import { buildApiUrl } from './apiUrl'
+
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_STACK_LENGTH = 8000
 
@@ -18,7 +20,7 @@ export function reportClientError(error: { message: string; stack?: string }): v
     userAgent: navigator.userAgent,
   }
 
-  fetch('/api/client-errors', {
+  fetch(buildApiUrl('/api/client-errors'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

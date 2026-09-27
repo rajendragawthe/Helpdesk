@@ -1,6 +1,7 @@
 import type { IPublicClientApplication } from '@azure/msal-browser'
 import { InteractionRequiredAuthError } from '@azure/msal-browser'
 import { apiScopes } from '../authConfig'
+import { buildApiUrl } from '../lib/apiUrl'
 
 export async function apiFetch(
   msalInstance: IPublicClientApplication,
@@ -24,7 +25,7 @@ export async function apiFetch(
     throw error
   }
 
-  return fetch(path, {
+  return fetch(buildApiUrl(path), {
     ...init,
     headers: {
       ...init.headers,
