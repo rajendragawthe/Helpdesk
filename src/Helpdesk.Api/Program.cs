@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Helpdesk.Api.Auth;
+using Helpdesk.Api.Cors;
 using Helpdesk.Application;
 using Helpdesk.Core.Enums;
 using Helpdesk.Infrastructure;
@@ -29,6 +30,8 @@ builder.Services.AddGraphApi(builder.Configuration);
 builder.Services.AddOpenRouter(builder.Configuration);
 builder.Services.AddKnowledgeBase();
 builder.Services.AddApplication(builder.Configuration);
+
+var corsConfigured = builder.Services.TryAddCors(builder.Configuration);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -59,6 +62,11 @@ if (app.Environment.IsDevelopment())
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
+}
+
+if (corsConfigured)
+{
+    app.UseCors(CorsExtensions.DefaultPolicyName);
 }
 
 app.UseAuthentication();
